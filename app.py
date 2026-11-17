@@ -6,6 +6,7 @@ import book_routes
 import loan_routes
 import member_routes
 import report_routes
+import docs_routes
 from db import init_db
 from errors import LibraryError
 
@@ -14,6 +15,7 @@ app.register_blueprint(book_routes.bp)
 app.register_blueprint(member_routes.bp)
 app.register_blueprint(loan_routes.bp)
 app.register_blueprint(report_routes.bp)
+app.register_blueprint(docs_routes.bp)
 
 
 @app.errorhandler(LibraryError)

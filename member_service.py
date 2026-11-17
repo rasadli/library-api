@@ -1,9 +1,10 @@
+import checks
 import member_repository
 import loan_repository
 import loan_service
 import fines
 import validation
-from errors import bad_request, conflict, not_found
+from errors import bad_request, conflict
 
 
 def list_members():
@@ -11,10 +12,7 @@ def list_members():
 
 
 def get_member(member_id):
-    member = member_repository.get_member(member_id)
-    if member is None:
-        raise not_found("member not found")
-    return member
+    return checks.require_member(member_id)
 
 
 def create_member(data):
@@ -38,6 +36,6 @@ def member_account(member_id):
         "due_date": loan["due_date"], "returned": bool(loan["returned"]),
         "fine": fines.money(loan["fine"]), "fine_paid": bool(loan["fine_paid"]),
     } for loan in rows]
-    limit = loan_service.STAFF_LOAN_LIMIT if member["type"] == "staff" else loan_service.STUDENT_LOAN_LIMIT
+    limit = checks.loan_limit_for(member)
     return {"loans": loans, "total_owed": fines.money(loan_service.total_owed(rows)),
             "loans_remaining": limit - loan_service.count_open_loans(rows)}

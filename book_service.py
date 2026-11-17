@@ -1,6 +1,7 @@
 import book_repository
+import checks
 import validation
-from errors import bad_request, conflict, not_found
+from errors import bad_request
 
 
 def list_books(only_available):
@@ -8,10 +9,7 @@ def list_books(only_available):
 
 
 def get_book(book_id):
-    book = book_repository.get_book(book_id)
-    if book is None:
-        raise not_found("book not found")
-    return book
+    return checks.require_book(book_id)
 
 
 def create_book(data):
@@ -23,7 +21,6 @@ def create_book(data):
 
 
 def delete_book(book_id):
-    book = get_book(book_id)
-    if book["available"] == 0:
-        raise conflict("book is on loan")
+    book = checks.require_book(book_id)
+    checks.require_book_not_on_loan(book)
     book_repository.delete_book(book_id)

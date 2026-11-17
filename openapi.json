@@ -1,0 +1,1434 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Library Management API",
+    "version": "1.0.0",
+    "description": "Campus library books, members, loans, and reports. Use Try it out to send requests to this running API. POST and DELETE operations change library data; loan operations also append notification emails to outbox.txt. Opening this documentation does not execute API operations. Examples are illustrative; IDs, dates, and balances depend on your data and the current date. No authentication is required."
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "This Flask server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Books",
+      "description": "Browse and manage the book catalog."
+    },
+    {
+      "name": "Members",
+      "description": "Register members and inspect their borrowing accounts."
+    },
+    {
+      "name": "Loans",
+      "description": "Check out, return, renew, and pay fines."
+    },
+    {
+      "name": "Reports",
+      "description": "Inspect overdue loans and library totals."
+    }
+  ],
+  "paths": {
+    "/books": {
+      "get": {
+        "tags": [
+          "Books"
+        ],
+        "operationId": "listBooks",
+        "summary": "List books",
+        "description": "List all books, optionally filtering to available books.",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Book"
+                  }
+                },
+                "example": [
+                  {
+                    "id": 1,
+                    "title": "Clean Code",
+                    "author": "Robert C. Martin",
+                    "isbn": "9780132350884",
+                    "available": true
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "available",
+            "in": "query",
+            "required": false,
+            "description": "Filter to books available for checkout. Only the exact lowercase string `true` enables filtering; any other value leaves the list unfiltered.",
+            "schema": {
+              "type": "string"
+            },
+            "example": "true"
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Books"
+        ],
+        "operationId": "createBook",
+        "summary": "Add a book",
+        "description": "Create a book with an available status. ISBN hyphens are preserved.",
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Book"
+                },
+                "example": {
+                  "id": 6,
+                  "title": "Dune",
+                  "author": "Frank Herbert",
+                  "isbn": "978-0441013593",
+                  "available": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "title and author are required; invalid isbn.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "1": {
+                    "summary": "title and author are required",
+                    "value": {
+                      "error": "title and author are required"
+                    }
+                  },
+                  "2": {
+                    "summary": "invalid isbn",
+                    "value": {
+                      "error": "invalid isbn"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "description": "JSON object. Missing or malformed JSON is treated as an empty object.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBook"
+              },
+              "example": {
+                "title": "Dune",
+                "author": "Frank Herbert",
+                "isbn": "978-0441013593"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/books/{book_id}": {
+      "get": {
+        "tags": [
+          "Books"
+        ],
+        "operationId": "getBook",
+        "summary": "Get a book",
+        "description": "Look up a book by its ID.",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Book"
+                },
+                "example": {
+                  "id": 1,
+                  "title": "Clean Code",
+                  "author": "Robert C. Martin",
+                  "isbn": "9780132350884",
+                  "available": true
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "book not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "1": {
+                    "summary": "book not found",
+                    "value": {
+                      "error": "book not found"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "book_id",
+            "in": "path",
+            "required": true,
+            "description": "Book id.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "example": 1
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Books"
+        ],
+        "operationId": "deleteBook",
+        "summary": "Delete a book",
+        "description": "Delete an available book. A book on loan cannot be deleted.",
+        "parameters": [
+          {
+            "name": "book_id",
+            "in": "path",
+            "required": true,
+            "description": "Book id.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "example": 1
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Book deleted. Empty response body."
+          },
+          "404": {
+            "description": "book not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "1": {
+                    "summary": "book not found",
+                    "value": {
+                      "error": "book not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "book is on loan.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "1": {
+                    "summary": "book is on loan",
+                    "value": {
+                      "error": "book is on loan"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/members": {
+      "get": {
+        "tags": [
+          "Members"
+        ],
+        "operationId": "listMembers",
+        "summary": "List members",
+        "description": "List all registered members.",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Member"
+                  }
+                },
+                "example": [
+                  {
+                    "id": 2,
+                    "name": "Dr. Noor Aziz",
+                    "email": "noor@campus.edu",
+                    "type": "staff"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Members"
+        ],
+        "operationId": "createMember",
+        "summary": "Register a member",
+        "description": "Register a member with a unique email. Member type defaults to student.",
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Member"
+                },
+                "example": {
+                  "id": 4,
+                  "name": "Lee Park",
+                  "email": "lee@campus.edu",
+                  "type": "student"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "name is required; invalid email; type must be student or staff.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "1": {
+                    "summary": "name is required",
+                    "value": {
+                      "error": "name is required"
+                    }
+                  },
+                  "2": {
+                    "summary": "invalid email",
+                    "value": {
+                      "error": "invalid email"
+                    }
+                  },
+                  "3": {
+                    "summary": "type must be student or staff",
+                    "value": {
+                      "error": "type must be student or staff"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "email already registered.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "1": {
+                    "summary": "email already registered",
+                    "value": {
+                      "error": "email already registered"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "description": "JSON object. Missing or malformed JSON is treated as an empty object.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMember"
+              },
+              "example": {
+                "name": "Lee Park",
+                "email": "lee@campus.edu"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/members/{member_id}": {
+      "get": {
+        "tags": [
+          "Members"
+        ],
+        "operationId": "getMember",
+        "summary": "Get a member",
+        "description": "Look up a registered member by ID.",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Member"
+                },
+                "example": {
+                  "id": 2,
+                  "name": "Dr. Noor Aziz",
+                  "email": "noor@campus.edu",
+                  "type": "staff"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "member not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "1": {
+                    "summary": "member not found",
+                    "value": {
+                      "error": "member not found"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "member_id",
+            "in": "path",
+            "required": true,
+            "description": "Member id.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "example": 1
+          }
+        ]
+      }
+    },
+    "/members/{member_id}/loans": {
+      "get": {
+        "tags": [
+          "Members"
+        ],
+        "operationId": "getMemberAccount",
+        "summary": "Get member loans and balance",
+        "description": "Return loan history, unpaid balance, and remaining loan allowance. Open overdue loans accrue fines.",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberAccount"
+                },
+                "example": {
+                  "loans": [
+                    {
+                      "id": 1,
+                      "book_id": 5,
+                      "due_date": "2026-11-02",
+                      "returned": false,
+                      "fine": 0.0,
+                      "fine_paid": false
+                    }
+                  ],
+                  "total_owed": 2.5,
+                  "loans_remaining": 2
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "member not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "1": {
+                    "summary": "member not found",
+                    "value": {
+                      "error": "member not found"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "member_id",
+            "in": "path",
+            "required": true,
+            "description": "Member id.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "example": 1
+          }
+        ]
+      }
+    },
+    "/loans": {
+      "get": {
+        "tags": [
+          "Loans"
+        ],
+        "operationId": "listLoans",
+        "summary": "List loans",
+        "description": "List loans, including current fines. The overdue filter includes only open loans with a due date before today.",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LoanDetail"
+                  }
+                },
+                "example": [
+                  {
+                    "id": 1,
+                    "book_id": 5,
+                    "member_id": 3,
+                    "due_date": "2026-11-02",
+                    "returned": false,
+                    "fine": 0.0,
+                    "fine_paid": false,
+                    "renewals": 0,
+                    "checked_out": "2026-10-19",
+                    "current_fine": 2.5
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "overdue",
+            "in": "query",
+            "required": false,
+            "description": "Filter to open overdue loans. Only the exact lowercase string `true` enables filtering; any other value leaves the list unfiltered.",
+            "schema": {
+              "type": "string"
+            },
+            "example": "true"
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Loans"
+        ],
+        "operationId": "createLoan",
+        "summary": "Check out a book",
+        "description": "Create a loan, mark the book unavailable, and append a checkout email to outbox.txt. Loans default to 14 days. Students may have 3 open loans; staff may have 5. Members with unpaid fines cannot borrow.",
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Loan"
+                },
+                "example": {
+                  "id": 2,
+                  "book_id": 1,
+                  "member_id": 1,
+                  "due_date": "2026-11-21",
+                  "returned": false,
+                  "fine": 0.0,
+                  "fine_paid": false,
+                  "renewals": 0,
+                  "checked_out": "2026-11-07"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "book_id and member_id are required; invalid due_date.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "1": {
+                    "summary": "book_id and member_id are required",
+                    "value": {
+                      "error": "book_id and member_id are required"
+                    }
+                  },
+                  "2": {
+                    "summary": "invalid due_date",
+                    "value": {
+                      "error": "invalid due_date"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "book not found; member not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "1": {
+                    "summary": "book not found",
+                    "value": {
+                      "error": "book not found"
+                    }
+                  },
+                  "2": {
+                    "summary": "member not found",
+                    "value": {
+                      "error": "member not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "book is not available; member has unpaid fines; loan limit reached.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "1": {
+                    "summary": "book is not available",
+                    "value": {
+                      "error": "book is not available"
+                    }
+                  },
+                  "2": {
+                    "summary": "member has unpaid fines",
+                    "value": {
+                      "error": "member has unpaid fines"
+                    }
+                  },
+                  "3": {
+                    "summary": "loan limit reached",
+                    "value": {
+                      "error": "loan limit reached"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "description": "JSON object. Missing or malformed JSON is treated as an empty object.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLoan"
+              },
+              "example": {
+                "book_id": 1,
+                "member_id": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "/loans/{loan_id}": {
+      "get": {
+        "tags": [
+          "Loans"
+        ],
+        "operationId": "getLoan",
+        "summary": "Get a loan",
+        "description": "Look up a loan and its current fine. Returned loans retain their stored fine even when paid.",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanDetail"
+                },
+                "example": {
+                  "id": 1,
+                  "book_id": 5,
+                  "member_id": 3,
+                  "due_date": "2026-11-02",
+                  "returned": false,
+                  "fine": 0.0,
+                  "fine_paid": false,
+                  "renewals": 0,
+                  "checked_out": "2026-10-19",
+                  "current_fine": 2.5
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "loan not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "1": {
+                    "summary": "loan not found",
+                    "value": {
+                      "error": "loan not found"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "loan_id",
+            "in": "path",
+            "required": true,
+            "description": "Loan id.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "example": 1
+          }
+        ]
+      }
+    },
+    "/loans/{loan_id}/return": {
+      "post": {
+        "tags": [
+          "Loans"
+        ],
+        "operationId": "returnLoan",
+        "summary": "Return a book",
+        "description": "Return an open loan, calculate a fine of $0.50 per late day, mark the book available, and append a return email to outbox.txt. No request body is needed.",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Loan"
+                },
+                "example": {
+                  "id": 1,
+                  "book_id": 5,
+                  "member_id": 3,
+                  "due_date": "2026-11-02",
+                  "returned": true,
+                  "fine": 2.5,
+                  "fine_paid": false,
+                  "renewals": 0,
+                  "checked_out": "2026-10-19"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "loan not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "1": {
+                    "summary": "loan not found",
+                    "value": {
+                      "error": "loan not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "loan already returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "1": {
+                    "summary": "loan already returned",
+                    "value": {
+                      "error": "loan already returned"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "loan_id",
+            "in": "path",
+            "required": true,
+            "description": "Loan id.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "example": 1
+          }
+        ]
+      }
+    },
+    "/loans/{loan_id}/renew": {
+      "post": {
+        "tags": [
+          "Loans"
+        ],
+        "operationId": "renewLoan",
+        "summary": "Renew a loan",
+        "description": "Extend the existing due date by 14 days and append a renewal email to outbox.txt. A loan may be renewed once, including on its due date, but never after return or when overdue. No request body is needed.",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Loan"
+                },
+                "example": {
+                  "id": 2,
+                  "book_id": 1,
+                  "member_id": 1,
+                  "due_date": "2026-12-05",
+                  "returned": false,
+                  "fine": 0.0,
+                  "fine_paid": false,
+                  "renewals": 1,
+                  "checked_out": "2026-11-07"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "loan not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "1": {
+                    "summary": "loan not found",
+                    "value": {
+                      "error": "loan not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "loan already returned; overdue loans cannot be renewed; loan was already renewed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "1": {
+                    "summary": "loan already returned",
+                    "value": {
+                      "error": "loan already returned"
+                    }
+                  },
+                  "2": {
+                    "summary": "overdue loans cannot be renewed",
+                    "value": {
+                      "error": "overdue loans cannot be renewed"
+                    }
+                  },
+                  "3": {
+                    "summary": "loan was already renewed",
+                    "value": {
+                      "error": "loan was already renewed"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "loan_id",
+            "in": "path",
+            "required": true,
+            "description": "Loan id.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "example": 1
+          }
+        ]
+      }
+    },
+    "/loans/{loan_id}/pay-fine": {
+      "post": {
+        "tags": [
+          "Loans"
+        ],
+        "operationId": "payFine",
+        "summary": "Pay a fine",
+        "description": "Mark a positive unpaid fine as paid after the book has been returned, and append a payment email to outbox.txt. The stored fine remains visible. No request body is needed.",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Loan"
+                },
+                "example": {
+                  "id": 1,
+                  "book_id": 5,
+                  "member_id": 3,
+                  "due_date": "2026-11-02",
+                  "returned": true,
+                  "fine": 2.5,
+                  "fine_paid": true,
+                  "renewals": 0,
+                  "checked_out": "2026-10-19"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "loan not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "1": {
+                    "summary": "loan not found",
+                    "value": {
+                      "error": "loan not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "return the book before paying; no fine to pay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "1": {
+                    "summary": "return the book before paying",
+                    "value": {
+                      "error": "return the book before paying"
+                    }
+                  },
+                  "2": {
+                    "summary": "no fine to pay",
+                    "value": {
+                      "error": "no fine to pay"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "loan_id",
+            "in": "path",
+            "required": true,
+            "description": "Loan id.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "example": 1
+          }
+        ]
+      }
+    },
+    "/reports/overdue": {
+      "get": {
+        "tags": [
+          "Reports"
+        ],
+        "operationId": "overdueReport",
+        "summary": "Get overdue report",
+        "description": "List open overdue loans with book/member names and accruing fines, plus their total.",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OverdueReport"
+                },
+                "example": {
+                  "items": [
+                    {
+                      "loan_id": 1,
+                      "title": "Code Complete",
+                      "member": "Alex Chen",
+                      "days_late": 5,
+                      "fine": 2.5
+                    }
+                  ],
+                  "total_fines": 2.5
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reports/summary": {
+      "get": {
+        "tags": [
+          "Reports"
+        ],
+        "operationId": "summaryReport",
+        "summary": "Get library summary",
+        "description": "Return total books, open loans, and all outstanding fines (including accruing fines on open loans).",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SummaryReport"
+                },
+                "example": {
+                  "total_books": 5,
+                  "on_loan": 1,
+                  "fines_outstanding": 2.5
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Human-readable error message."
+          }
+        }
+      },
+      "Book": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "author",
+          "isbn",
+          "available"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Book ID."
+          },
+          "title": {
+            "type": "string",
+            "description": "Book title."
+          },
+          "author": {
+            "type": "string",
+            "description": "Author name."
+          },
+          "isbn": {
+            "type": "string",
+            "description": "ISBN as supplied, including any hyphens."
+          },
+          "available": {
+            "type": "boolean",
+            "description": "Whether the book can be checked out."
+          }
+        }
+      },
+      "CreateBook": {
+        "type": "object",
+        "required": [
+          "title",
+          "author",
+          "isbn"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "author": {
+            "type": "string",
+            "minLength": 1
+          },
+          "isbn": {
+            "type": "string",
+            "description": "10 or 13 digits after removing hyphens.",
+            "example": "978-0441013593"
+          }
+        }
+      },
+      "Member": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "email",
+          "type"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Member ID."
+          },
+          "name": {
+            "type": "string",
+            "description": "Member name."
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "student",
+              "staff"
+            ]
+          }
+        }
+      },
+      "CreateMember": {
+        "type": "object",
+        "required": [
+          "name",
+          "email"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Must be unique and contain a non-whitespace local part, domain, and dotted suffix."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "student",
+              "staff"
+            ],
+            "default": "student"
+          }
+        }
+      },
+      "Loan": {
+        "type": "object",
+        "required": [
+          "id",
+          "book_id",
+          "member_id",
+          "due_date",
+          "returned",
+          "fine",
+          "fine_paid",
+          "renewals",
+          "checked_out"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Loan ID."
+          },
+          "book_id": {
+            "type": "integer",
+            "description": "Borrowed book ID."
+          },
+          "member_id": {
+            "type": "integer",
+            "description": "Borrowing member ID."
+          },
+          "due_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "returned": {
+            "type": "boolean"
+          },
+          "fine": {
+            "type": "number",
+            "description": "Fine stored when returned; zero before return."
+          },
+          "fine_paid": {
+            "type": "boolean"
+          },
+          "renewals": {
+            "type": "integer",
+            "description": "Number of renewals."
+          },
+          "checked_out": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "LoanDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Loan"
+          },
+          {
+            "type": "object",
+            "required": [
+              "current_fine"
+            ],
+            "properties": {
+              "current_fine": {
+                "type": "number",
+                "description": "Accruing fine for an open loan, or stored fine after return. Payment does not erase this value."
+              }
+            }
+          }
+        ]
+      },
+      "CreateLoan": {
+        "type": "object",
+        "required": [
+          "book_id",
+          "member_id"
+        ],
+        "properties": {
+          "book_id": {
+            "type": "integer",
+            "description": "ID of an available book."
+          },
+          "member_id": {
+            "type": "integer",
+            "description": "ID of a member eligible to borrow."
+          },
+          "due_date": {
+            "type": "string",
+            "format": "date",
+            "nullable": true,
+            "description": "Optional ISO date; defaults to 14 days from today when omitted, null, or empty. Past dates are accepted.",
+            "example": "2026-11-21"
+          }
+        }
+      },
+      "MemberLoan": {
+        "type": "object",
+        "required": [
+          "id",
+          "book_id",
+          "due_date",
+          "returned",
+          "fine",
+          "fine_paid"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Loan ID."
+          },
+          "book_id": {
+            "type": "integer",
+            "description": "Book ID."
+          },
+          "due_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "returned": {
+            "type": "boolean"
+          },
+          "fine": {
+            "type": "number",
+            "description": "Stored fine."
+          },
+          "fine_paid": {
+            "type": "boolean"
+          }
+        }
+      },
+      "MemberAccount": {
+        "type": "object",
+        "required": [
+          "loans",
+          "total_owed",
+          "loans_remaining"
+        ],
+        "properties": {
+          "loans": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemberLoan"
+            }
+          },
+          "total_owed": {
+            "type": "number",
+            "description": "Unpaid stored fines plus accruing fines on open loans."
+          },
+          "loans_remaining": {
+            "type": "integer",
+            "description": "Member limit (3 for students, 5 for staff) minus open loans."
+          }
+        }
+      },
+      "OverdueItem": {
+        "type": "object",
+        "required": [
+          "loan_id",
+          "title",
+          "member",
+          "days_late",
+          "fine"
+        ],
+        "properties": {
+          "loan_id": {
+            "type": "integer",
+            "description": "Loan ID."
+          },
+          "title": {
+            "type": "string",
+            "description": "Book title."
+          },
+          "member": {
+            "type": "string",
+            "description": "Member name."
+          },
+          "days_late": {
+            "type": "integer",
+            "description": "Days past due."
+          },
+          "fine": {
+            "type": "number",
+            "description": "Accruing fine at $0.50 per day."
+          }
+        }
+      },
+      "OverdueReport": {
+        "type": "object",
+        "required": [
+          "items",
+          "total_fines"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OverdueItem"
+            }
+          },
+          "total_fines": {
+            "type": "number",
+            "description": "Sum of fines for open overdue loans."
+          }
+        }
+      },
+      "SummaryReport": {
+        "type": "object",
+        "required": [
+          "total_books",
+          "on_loan",
+          "fines_outstanding"
+        ],
+        "properties": {
+          "total_books": {
+            "type": "integer",
+            "description": "Number of books."
+          },
+          "on_loan": {
+            "type": "integer",
+            "description": "Number of open loans."
+          },
+          "fines_outstanding": {
+            "type": "number",
+            "description": "Unpaid stored fines plus accruing fines on open loans."
+          }
+        }
+      }
+    }
+  }
+}

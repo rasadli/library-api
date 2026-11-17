@@ -1,0 +1,2609 @@
+{
+  "info": {
+    "_postman_id": "9802f02c-3992-4098-a5a3-56af5b61f303",
+    "name": "Library Management API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Library Management API 1.0.0. Generated from openapi.json and checked against the Flask routes/services. Includes all 16 library operations and 2 documentation endpoints. Import Local.postman_environment.json and select Local. Recommended manual workflow: Members / Register a member -> Books / Add a book -> Loans / Check out a book -> Loans / Get a loan -> Loans / Renew a loan (optional, once before return) -> Members / Get member loans and balance -> Loans / Return a book -> Reports. Edit the registration email before repeating it. Pay a fine requires a returned loan with a positive unpaid fine; an on-time return has no fine. Example responses are illustrative snapshots, not assertions about your database. See postman/README.md. POST operations modify data; loan mutations append outbox.txt notifications. Delete a book is blocked unless allowDelete is explicitly set to true; never run the entire collection as automatic cleanup."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000",
+      "type": "string",
+      "description": "Local default; resource IDs are examples and may not exist."
+    },
+    {
+      "key": "bookId",
+      "value": "1",
+      "type": "string",
+      "description": "Local default; resource IDs are examples and may not exist."
+    },
+    {
+      "key": "memberId",
+      "value": "1",
+      "type": "string",
+      "description": "Local default; resource IDs are examples and may not exist."
+    },
+    {
+      "key": "loanId",
+      "value": "1",
+      "type": "string",
+      "description": "Local default; resource IDs are examples and may not exist."
+    },
+    {
+      "key": "allowDelete",
+      "value": "false",
+      "type": "string",
+      "description": "Deletion opt-in. Leave false except while intentionally deleting a verified test book."
+    }
+  ],
+  "item": [
+    {
+      "name": "Books",
+      "description": "Browse and manage the book catalog.",
+      "item": [
+        {
+          "name": "List books",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/books",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "books"
+              ],
+              "query": [
+                {
+                  "key": "available",
+                  "value": "true",
+                  "disabled": true,
+                  "description": "Filter to books available for checkout. Only the exact lowercase string `true` enables filtering; any other value leaves the list unfiltered. Optional: enable this query parameter to filter."
+                }
+              ]
+            },
+            "description": "List all books, optionally filtering to available books.\n\nExpected success: HTTP 200."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Expected success status: 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "let responseBody;",
+                  "pm.test(\"Response is valid JSON\", function () {",
+                  "    responseBody = pm.response.json();",
+                  "    pm.expect(responseBody).to.not.equal(null);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "HTTP 200 - Example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/books",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "books"
+                  ],
+                  "query": [
+                    {
+                      "key": "available",
+                      "value": "true",
+                      "disabled": true,
+                      "description": "Filter to books available for checkout. Only the exact lowercase string `true` enables filtering; any other value leaves the list unfiltered. Optional: enable this query parameter to filter."
+                    }
+                  ]
+                },
+                "description": "List all books, optionally filtering to available books.\n\nExpected success: HTTP 200."
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "[\n  {\n    \"id\": 1,\n    \"title\": \"Clean Code\",\n    \"author\": \"Robert C. Martin\",\n    \"isbn\": \"9780132350884\",\n    \"available\": true\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Add a book",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/books",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "books"
+              ]
+            },
+            "description": "Create a book with an available status. ISBN hyphens are preserved.\n\nExpected success: HTTP 201.\n\nWARNING: This request modifies the local database.\nHTTP 400: title and author are required; invalid isbn.\n\nRequired JSON fields: title, author, isbn. Optional fields: none.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Dune\",\n  \"author\": \"Frank Herbert\",\n  \"isbn\": \"978-0441013593\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Expected success status: 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "let responseBody;",
+                  "pm.test(\"Response is valid JSON\", function () {",
+                  "    responseBody = pm.response.json();",
+                  "    pm.expect(responseBody).to.not.equal(null);",
+                  "});",
+                  "if (pm.response.code === 201 && responseBody &&",
+                  "    Number.isInteger(responseBody.id) && responseBody.id > 0) {",
+                  "    pm.collectionVariables.set(\"bookId\", String(responseBody.id));",
+                  "    // Environment values take precedence over collection values.",
+                  "    if (pm.environment.has(\"bookId\")) {",
+                  "        pm.environment.set(\"bookId\", String(responseBody.id));",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "HTTP 201 - Example",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/books",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "books"
+                  ]
+                },
+                "description": "Create a book with an available status. ISBN hyphens are preserved.\n\nExpected success: HTTP 201.\n\nWARNING: This request modifies the local database.\nHTTP 400: title and author are required; invalid isbn.\n\nRequired JSON fields: title, author, isbn. Optional fields: none.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Dune\",\n  \"author\": \"Frank Herbert\",\n  \"isbn\": \"978-0441013593\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": 6,\n  \"title\": \"Dune\",\n  \"author\": \"Frank Herbert\",\n  \"isbn\": \"978-0441013593\",\n  \"available\": true\n}"
+            },
+            {
+              "name": "HTTP 400 - title and author are required",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/books",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "books"
+                  ]
+                },
+                "description": "Create a book with an available status. ISBN hyphens are preserved.\n\nExpected success: HTTP 201.\n\nWARNING: This request modifies the local database.\nHTTP 400: title and author are required; invalid isbn.\n\nRequired JSON fields: title, author, isbn. Optional fields: none.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Dune\",\n  \"author\": \"Frank Herbert\",\n  \"isbn\": \"978-0441013593\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"title and author are required\"\n}"
+            },
+            {
+              "name": "HTTP 400 - invalid isbn",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/books",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "books"
+                  ]
+                },
+                "description": "Create a book with an available status. ISBN hyphens are preserved.\n\nExpected success: HTTP 201.\n\nWARNING: This request modifies the local database.\nHTTP 400: title and author are required; invalid isbn.\n\nRequired JSON fields: title, author, isbn. Optional fields: none.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Dune\",\n  \"author\": \"Frank Herbert\",\n  \"isbn\": \"978-0441013593\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"invalid isbn\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get a book",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/books/{{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "books",
+                "{{bookId}}"
+              ]
+            },
+            "description": "Look up a book by its ID.\n\nExpected success: HTTP 200.\nHTTP 404: book not found."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Expected success status: 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "let responseBody;",
+                  "pm.test(\"Response is valid JSON\", function () {",
+                  "    responseBody = pm.response.json();",
+                  "    pm.expect(responseBody).to.not.equal(null);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "HTTP 200 - Example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/books/{{bookId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "books",
+                    "{{bookId}}"
+                  ]
+                },
+                "description": "Look up a book by its ID.\n\nExpected success: HTTP 200.\nHTTP 404: book not found."
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": 1,\n  \"title\": \"Clean Code\",\n  \"author\": \"Robert C. Martin\",\n  \"isbn\": \"9780132350884\",\n  \"available\": true\n}"
+            },
+            {
+              "name": "HTTP 404 - book not found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/books/{{bookId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "books",
+                    "{{bookId}}"
+                  ]
+                },
+                "description": "Look up a book by its ID.\n\nExpected success: HTTP 200.\nHTTP 404: book not found."
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"book not found\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete a book",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/books/{{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "books",
+                "{{bookId}}"
+              ]
+            },
+            "description": "Delete an available book. A book on loan cannot be deleted.\n\nExpected success: HTTP 204.\n\nWARNING: This request modifies the local database. Deletion is irreversible. Confirm bookId is your disposable test book and it is available. Set the collection variable allowDelete to true to send; restore it to false immediately afterward. The pre-request script otherwise skips this request, including in the Runner.\nHTTP 404: book not found.\nHTTP 409: book is on loan."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.variables.get(\"allowDelete\") !== \"true\") {",
+                  "    console.warn(\"Deletion skipped. Verify bookId and explicitly set allowDelete=true to proceed.\");",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Expected success status: 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});",
+                  "pm.test(\"Response body is empty\", function () {",
+                  "    pm.expect(pm.response.text()).to.equal(\"\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "HTTP 204 - Empty response",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/books/{{bookId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "books",
+                    "{{bookId}}"
+                  ]
+                },
+                "description": "Delete an available book. A book on loan cannot be deleted.\n\nExpected success: HTTP 204.\n\nWARNING: This request modifies the local database. Deletion is irreversible. Confirm bookId is your disposable test book and it is available. Set the collection variable allowDelete to true to send; restore it to false immediately afterward. The pre-request script otherwise skips this request, including in the Runner.\nHTTP 404: book not found.\nHTTP 409: book is on loan."
+              },
+              "status": "No Content",
+              "code": 204,
+              "header": [],
+              "body": ""
+            },
+            {
+              "name": "HTTP 404 - book not found",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/books/{{bookId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "books",
+                    "{{bookId}}"
+                  ]
+                },
+                "description": "Delete an available book. A book on loan cannot be deleted.\n\nExpected success: HTTP 204.\n\nWARNING: This request modifies the local database. Deletion is irreversible. Confirm bookId is your disposable test book and it is available. Set the collection variable allowDelete to true to send; restore it to false immediately afterward. The pre-request script otherwise skips this request, including in the Runner.\nHTTP 404: book not found.\nHTTP 409: book is on loan."
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"book not found\"\n}"
+            },
+            {
+              "name": "HTTP 409 - book is on loan",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/books/{{bookId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "books",
+                    "{{bookId}}"
+                  ]
+                },
+                "description": "Delete an available book. A book on loan cannot be deleted.\n\nExpected success: HTTP 204.\n\nWARNING: This request modifies the local database. Deletion is irreversible. Confirm bookId is your disposable test book and it is available. Set the collection variable allowDelete to true to send; restore it to false immediately afterward. The pre-request script otherwise skips this request, including in the Runner.\nHTTP 404: book not found.\nHTTP 409: book is on loan."
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"book is on loan\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Members",
+      "description": "Register members and inspect their borrowing accounts.",
+      "item": [
+        {
+          "name": "List members",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "members"
+              ]
+            },
+            "description": "List all registered members.\n\nExpected success: HTTP 200."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Expected success status: 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "let responseBody;",
+                  "pm.test(\"Response is valid JSON\", function () {",
+                  "    responseBody = pm.response.json();",
+                  "    pm.expect(responseBody).to.not.equal(null);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "HTTP 200 - Example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/members",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "members"
+                  ]
+                },
+                "description": "List all registered members.\n\nExpected success: HTTP 200."
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "[\n  {\n    \"id\": 2,\n    \"name\": \"Dr. Noor Aziz\",\n    \"email\": \"noor@campus.edu\",\n    \"type\": \"staff\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Register a member",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "members"
+              ]
+            },
+            "description": "Register a member with a unique email. Member type defaults to student.\n\nExpected success: HTTP 201.\n\nWARNING: This request modifies the local database. Change the example email to a new valid address before each repeat; duplicate email returns 409 and preserves saved memberId.\nHTTP 400: name is required; invalid email; type must be student or staff.\nHTTP 409: email already registered.\n\nRequired JSON fields: name, email. Optional fields: type.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Lee Park\",\n  \"email\": \"lee@campus.edu\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Expected success status: 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "let responseBody;",
+                  "pm.test(\"Response is valid JSON\", function () {",
+                  "    responseBody = pm.response.json();",
+                  "    pm.expect(responseBody).to.not.equal(null);",
+                  "});",
+                  "if (pm.response.code === 201 && responseBody &&",
+                  "    Number.isInteger(responseBody.id) && responseBody.id > 0) {",
+                  "    pm.collectionVariables.set(\"memberId\", String(responseBody.id));",
+                  "    // Environment values take precedence over collection values.",
+                  "    if (pm.environment.has(\"memberId\")) {",
+                  "        pm.environment.set(\"memberId\", String(responseBody.id));",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "HTTP 201 - Example",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/members",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "members"
+                  ]
+                },
+                "description": "Register a member with a unique email. Member type defaults to student.\n\nExpected success: HTTP 201.\n\nWARNING: This request modifies the local database. Change the example email to a new valid address before each repeat; duplicate email returns 409 and preserves saved memberId.\nHTTP 400: name is required; invalid email; type must be student or staff.\nHTTP 409: email already registered.\n\nRequired JSON fields: name, email. Optional fields: type.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Lee Park\",\n  \"email\": \"lee@campus.edu\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": 4,\n  \"name\": \"Lee Park\",\n  \"email\": \"lee@campus.edu\",\n  \"type\": \"student\"\n}"
+            },
+            {
+              "name": "HTTP 400 - name is required",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/members",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "members"
+                  ]
+                },
+                "description": "Register a member with a unique email. Member type defaults to student.\n\nExpected success: HTTP 201.\n\nWARNING: This request modifies the local database. Change the example email to a new valid address before each repeat; duplicate email returns 409 and preserves saved memberId.\nHTTP 400: name is required; invalid email; type must be student or staff.\nHTTP 409: email already registered.\n\nRequired JSON fields: name, email. Optional fields: type.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Lee Park\",\n  \"email\": \"lee@campus.edu\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"name is required\"\n}"
+            },
+            {
+              "name": "HTTP 400 - invalid email",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/members",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "members"
+                  ]
+                },
+                "description": "Register a member with a unique email. Member type defaults to student.\n\nExpected success: HTTP 201.\n\nWARNING: This request modifies the local database. Change the example email to a new valid address before each repeat; duplicate email returns 409 and preserves saved memberId.\nHTTP 400: name is required; invalid email; type must be student or staff.\nHTTP 409: email already registered.\n\nRequired JSON fields: name, email. Optional fields: type.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Lee Park\",\n  \"email\": \"lee@campus.edu\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"invalid email\"\n}"
+            },
+            {
+              "name": "HTTP 400 - type must be student or staff",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/members",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "members"
+                  ]
+                },
+                "description": "Register a member with a unique email. Member type defaults to student.\n\nExpected success: HTTP 201.\n\nWARNING: This request modifies the local database. Change the example email to a new valid address before each repeat; duplicate email returns 409 and preserves saved memberId.\nHTTP 400: name is required; invalid email; type must be student or staff.\nHTTP 409: email already registered.\n\nRequired JSON fields: name, email. Optional fields: type.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Lee Park\",\n  \"email\": \"lee@campus.edu\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"type must be student or staff\"\n}"
+            },
+            {
+              "name": "HTTP 409 - email already registered",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/members",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "members"
+                  ]
+                },
+                "description": "Register a member with a unique email. Member type defaults to student.\n\nExpected success: HTTP 201.\n\nWARNING: This request modifies the local database. Change the example email to a new valid address before each repeat; duplicate email returns 409 and preserves saved memberId.\nHTTP 400: name is required; invalid email; type must be student or staff.\nHTTP 409: email already registered.\n\nRequired JSON fields: name, email. Optional fields: type.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Lee Park\",\n  \"email\": \"lee@campus.edu\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"email already registered\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get a member",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/members/{{memberId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "members",
+                "{{memberId}}"
+              ]
+            },
+            "description": "Look up a registered member by ID.\n\nExpected success: HTTP 200.\nHTTP 404: member not found."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Expected success status: 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "let responseBody;",
+                  "pm.test(\"Response is valid JSON\", function () {",
+                  "    responseBody = pm.response.json();",
+                  "    pm.expect(responseBody).to.not.equal(null);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "HTTP 200 - Example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/members/{{memberId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "members",
+                    "{{memberId}}"
+                  ]
+                },
+                "description": "Look up a registered member by ID.\n\nExpected success: HTTP 200.\nHTTP 404: member not found."
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": 2,\n  \"name\": \"Dr. Noor Aziz\",\n  \"email\": \"noor@campus.edu\",\n  \"type\": \"staff\"\n}"
+            },
+            {
+              "name": "HTTP 404 - member not found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/members/{{memberId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "members",
+                    "{{memberId}}"
+                  ]
+                },
+                "description": "Look up a registered member by ID.\n\nExpected success: HTTP 200.\nHTTP 404: member not found."
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"member not found\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get member loans and balance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/members/{{memberId}}/loans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "members",
+                "{{memberId}}",
+                "loans"
+              ]
+            },
+            "description": "Return loan history, unpaid balance, and remaining loan allowance. Open overdue loans accrue fines.\n\nExpected success: HTTP 200.\nHTTP 404: member not found."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Expected success status: 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "let responseBody;",
+                  "pm.test(\"Response is valid JSON\", function () {",
+                  "    responseBody = pm.response.json();",
+                  "    pm.expect(responseBody).to.not.equal(null);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "HTTP 200 - Example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/members/{{memberId}}/loans",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "members",
+                    "{{memberId}}",
+                    "loans"
+                  ]
+                },
+                "description": "Return loan history, unpaid balance, and remaining loan allowance. Open overdue loans accrue fines.\n\nExpected success: HTTP 200.\nHTTP 404: member not found."
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"loans\": [\n    {\n      \"id\": 1,\n      \"book_id\": 5,\n      \"due_date\": \"2026-11-02\",\n      \"returned\": false,\n      \"fine\": 0.0,\n      \"fine_paid\": false\n    }\n  ],\n  \"total_owed\": 2.5,\n  \"loans_remaining\": 2\n}"
+            },
+            {
+              "name": "HTTP 404 - member not found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/members/{{memberId}}/loans",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "members",
+                    "{{memberId}}",
+                    "loans"
+                  ]
+                },
+                "description": "Return loan history, unpaid balance, and remaining loan allowance. Open overdue loans accrue fines.\n\nExpected success: HTTP 200.\nHTTP 404: member not found."
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"member not found\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Loans",
+      "description": "Check out, return, renew, and pay fines.",
+      "item": [
+        {
+          "name": "List loans",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/loans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "loans"
+              ],
+              "query": [
+                {
+                  "key": "overdue",
+                  "value": "true",
+                  "disabled": true,
+                  "description": "Filter to open overdue loans. Only the exact lowercase string `true` enables filtering; any other value leaves the list unfiltered. Optional: enable this query parameter to filter."
+                }
+              ]
+            },
+            "description": "List loans, including current fines. The overdue filter includes only open loans with a due date before today.\n\nExpected success: HTTP 200."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Expected success status: 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "let responseBody;",
+                  "pm.test(\"Response is valid JSON\", function () {",
+                  "    responseBody = pm.response.json();",
+                  "    pm.expect(responseBody).to.not.equal(null);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "HTTP 200 - Example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/loans",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "loans"
+                  ],
+                  "query": [
+                    {
+                      "key": "overdue",
+                      "value": "true",
+                      "disabled": true,
+                      "description": "Filter to open overdue loans. Only the exact lowercase string `true` enables filtering; any other value leaves the list unfiltered. Optional: enable this query parameter to filter."
+                    }
+                  ]
+                },
+                "description": "List loans, including current fines. The overdue filter includes only open loans with a due date before today.\n\nExpected success: HTTP 200."
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "[\n  {\n    \"id\": 1,\n    \"book_id\": 5,\n    \"member_id\": 3,\n    \"due_date\": \"2026-11-02\",\n    \"returned\": false,\n    \"fine\": 0.0,\n    \"fine_paid\": false,\n    \"renewals\": 0,\n    \"checked_out\": \"2026-10-19\",\n    \"current_fine\": 2.5\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Check out a book",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/loans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "loans"
+              ]
+            },
+            "description": "Create a loan, mark the book unavailable, and append a checkout email to outbox.txt. Loans default to 14 days. Students may have 3 open loans; staff may have 5. Members with unpaid fines cannot borrow.\n\nExpected success: HTTP 201.\n\nWARNING: This request modifies the local database.\nHTTP 400: book_id and member_id are required; invalid due_date.\nHTTP 404: book not found; member not found.\nHTTP 409: book is not available; member has unpaid fines; loan limit reached.\n\nRequired JSON fields: book_id, member_id. Optional fields: due_date.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"book_id\": {{bookId}},\n  \"member_id\": {{memberId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Expected success status: 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "let responseBody;",
+                  "pm.test(\"Response is valid JSON\", function () {",
+                  "    responseBody = pm.response.json();",
+                  "    pm.expect(responseBody).to.not.equal(null);",
+                  "});",
+                  "if (pm.response.code === 201 && responseBody &&",
+                  "    Number.isInteger(responseBody.id) && responseBody.id > 0) {",
+                  "    pm.collectionVariables.set(\"loanId\", String(responseBody.id));",
+                  "    // Environment values take precedence over collection values.",
+                  "    if (pm.environment.has(\"loanId\")) {",
+                  "        pm.environment.set(\"loanId\", String(responseBody.id));",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "HTTP 201 - Example",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/loans",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "loans"
+                  ]
+                },
+                "description": "Create a loan, mark the book unavailable, and append a checkout email to outbox.txt. Loans default to 14 days. Students may have 3 open loans; staff may have 5. Members with unpaid fines cannot borrow.\n\nExpected success: HTTP 201.\n\nWARNING: This request modifies the local database.\nHTTP 400: book_id and member_id are required; invalid due_date.\nHTTP 404: book not found; member not found.\nHTTP 409: book is not available; member has unpaid fines; loan limit reached.\n\nRequired JSON fields: book_id, member_id. Optional fields: due_date.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"book_id\": {{bookId}},\n  \"member_id\": {{memberId}}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": 2,\n  \"book_id\": 1,\n  \"member_id\": 1,\n  \"due_date\": \"2026-11-21\",\n  \"returned\": false,\n  \"fine\": 0.0,\n  \"fine_paid\": false,\n  \"renewals\": 0,\n  \"checked_out\": \"2026-11-07\"\n}"
+            },
+            {
+              "name": "HTTP 400 - book_id and member_id are required",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/loans",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "loans"
+                  ]
+                },
+                "description": "Create a loan, mark the book unavailable, and append a checkout email to outbox.txt. Loans default to 14 days. Students may have 3 open loans; staff may have 5. Members with unpaid fines cannot borrow.\n\nExpected success: HTTP 201.\n\nWARNING: This request modifies the local database.\nHTTP 400: book_id and member_id are required; invalid due_date.\nHTTP 404: book not found; member not found.\nHTTP 409: book is not available; member has unpaid fines; loan limit reached.\n\nRequired JSON fields: book_id, member_id. Optional fields: due_date.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"book_id\": {{bookId}},\n  \"member_id\": {{memberId}}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"book_id and member_id are required\"\n}"
+            },
+            {
+              "name": "HTTP 400 - invalid due_date",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/loans",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "loans"
+                  ]
+                },
+                "description": "Create a loan, mark the book unavailable, and append a checkout email to outbox.txt. Loans default to 14 days. Students may have 3 open loans; staff may have 5. Members with unpaid fines cannot borrow.\n\nExpected success: HTTP 201.\n\nWARNING: This request modifies the local database.\nHTTP 400: book_id and member_id are required; invalid due_date.\nHTTP 404: book not found; member not found.\nHTTP 409: book is not available; member has unpaid fines; loan limit reached.\n\nRequired JSON fields: book_id, member_id. Optional fields: due_date.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"book_id\": {{bookId}},\n  \"member_id\": {{memberId}}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"invalid due_date\"\n}"
+            },
+            {
+              "name": "HTTP 404 - book not found",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/loans",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "loans"
+                  ]
+                },
+                "description": "Create a loan, mark the book unavailable, and append a checkout email to outbox.txt. Loans default to 14 days. Students may have 3 open loans; staff may have 5. Members with unpaid fines cannot borrow.\n\nExpected success: HTTP 201.\n\nWARNING: This request modifies the local database.\nHTTP 400: book_id and member_id are required; invalid due_date.\nHTTP 404: book not found; member not found.\nHTTP 409: book is not available; member has unpaid fines; loan limit reached.\n\nRequired JSON fields: book_id, member_id. Optional fields: due_date.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"book_id\": {{bookId}},\n  \"member_id\": {{memberId}}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"book not found\"\n}"
+            },
+            {
+              "name": "HTTP 404 - member not found",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/loans",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "loans"
+                  ]
+                },
+                "description": "Create a loan, mark the book unavailable, and append a checkout email to outbox.txt. Loans default to 14 days. Students may have 3 open loans; staff may have 5. Members with unpaid fines cannot borrow.\n\nExpected success: HTTP 201.\n\nWARNING: This request modifies the local database.\nHTTP 400: book_id and member_id are required; invalid due_date.\nHTTP 404: book not found; member not found.\nHTTP 409: book is not available; member has unpaid fines; loan limit reached.\n\nRequired JSON fields: book_id, member_id. Optional fields: due_date.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"book_id\": {{bookId}},\n  \"member_id\": {{memberId}}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"member not found\"\n}"
+            },
+            {
+              "name": "HTTP 409 - book is not available",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/loans",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "loans"
+                  ]
+                },
+                "description": "Create a loan, mark the book unavailable, and append a checkout email to outbox.txt. Loans default to 14 days. Students may have 3 open loans; staff may have 5. Members with unpaid fines cannot borrow.\n\nExpected success: HTTP 201.\n\nWARNING: This request modifies the local database.\nHTTP 400: book_id and member_id are required; invalid due_date.\nHTTP 404: book not found; member not found.\nHTTP 409: book is not available; member has unpaid fines; loan limit reached.\n\nRequired JSON fields: book_id, member_id. Optional fields: due_date.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"book_id\": {{bookId}},\n  \"member_id\": {{memberId}}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"book is not available\"\n}"
+            },
+            {
+              "name": "HTTP 409 - member has unpaid fines",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/loans",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "loans"
+                  ]
+                },
+                "description": "Create a loan, mark the book unavailable, and append a checkout email to outbox.txt. Loans default to 14 days. Students may have 3 open loans; staff may have 5. Members with unpaid fines cannot borrow.\n\nExpected success: HTTP 201.\n\nWARNING: This request modifies the local database.\nHTTP 400: book_id and member_id are required; invalid due_date.\nHTTP 404: book not found; member not found.\nHTTP 409: book is not available; member has unpaid fines; loan limit reached.\n\nRequired JSON fields: book_id, member_id. Optional fields: due_date.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"book_id\": {{bookId}},\n  \"member_id\": {{memberId}}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"member has unpaid fines\"\n}"
+            },
+            {
+              "name": "HTTP 409 - loan limit reached",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/loans",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "loans"
+                  ]
+                },
+                "description": "Create a loan, mark the book unavailable, and append a checkout email to outbox.txt. Loans default to 14 days. Students may have 3 open loans; staff may have 5. Members with unpaid fines cannot borrow.\n\nExpected success: HTTP 201.\n\nWARNING: This request modifies the local database.\nHTTP 400: book_id and member_id are required; invalid due_date.\nHTTP 404: book not found; member not found.\nHTTP 409: book is not available; member has unpaid fines; loan limit reached.\n\nRequired JSON fields: book_id, member_id. Optional fields: due_date.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"book_id\": {{bookId}},\n  \"member_id\": {{memberId}}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"loan limit reached\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get a loan",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/loans/{{loanId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "loans",
+                "{{loanId}}"
+              ]
+            },
+            "description": "Look up a loan and its current fine. Returned loans retain their stored fine even when paid.\n\nExpected success: HTTP 200.\nHTTP 404: loan not found."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Expected success status: 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "let responseBody;",
+                  "pm.test(\"Response is valid JSON\", function () {",
+                  "    responseBody = pm.response.json();",
+                  "    pm.expect(responseBody).to.not.equal(null);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "HTTP 200 - Example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/loans/{{loanId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "loans",
+                    "{{loanId}}"
+                  ]
+                },
+                "description": "Look up a loan and its current fine. Returned loans retain their stored fine even when paid.\n\nExpected success: HTTP 200.\nHTTP 404: loan not found."
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": 1,\n  \"book_id\": 5,\n  \"member_id\": 3,\n  \"due_date\": \"2026-11-02\",\n  \"returned\": false,\n  \"fine\": 0.0,\n  \"fine_paid\": false,\n  \"renewals\": 0,\n  \"checked_out\": \"2026-10-19\",\n  \"current_fine\": 2.5\n}"
+            },
+            {
+              "name": "HTTP 404 - loan not found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/loans/{{loanId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "loans",
+                    "{{loanId}}"
+                  ]
+                },
+                "description": "Look up a loan and its current fine. Returned loans retain their stored fine even when paid.\n\nExpected success: HTTP 200.\nHTTP 404: loan not found."
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"loan not found\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Return a book",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/loans/{{loanId}}/return",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "loans",
+                "{{loanId}}",
+                "return"
+              ]
+            },
+            "description": "Return an open loan, calculate a fine of $0.50 per late day, mark the book available, and append a return email to outbox.txt. No request body is needed.\n\nExpected success: HTTP 200.\n\nWARNING: This request modifies the local database.\nHTTP 404: loan not found.\nHTTP 409: loan already returned."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Expected success status: 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "let responseBody;",
+                  "pm.test(\"Response is valid JSON\", function () {",
+                  "    responseBody = pm.response.json();",
+                  "    pm.expect(responseBody).to.not.equal(null);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "HTTP 200 - Example",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/loans/{{loanId}}/return",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "loans",
+                    "{{loanId}}",
+                    "return"
+                  ]
+                },
+                "description": "Return an open loan, calculate a fine of $0.50 per late day, mark the book available, and append a return email to outbox.txt. No request body is needed.\n\nExpected success: HTTP 200.\n\nWARNING: This request modifies the local database.\nHTTP 404: loan not found.\nHTTP 409: loan already returned."
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": 1,\n  \"book_id\": 5,\n  \"member_id\": 3,\n  \"due_date\": \"2026-11-02\",\n  \"returned\": true,\n  \"fine\": 2.5,\n  \"fine_paid\": false,\n  \"renewals\": 0,\n  \"checked_out\": \"2026-10-19\"\n}"
+            },
+            {
+              "name": "HTTP 404 - loan not found",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/loans/{{loanId}}/return",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "loans",
+                    "{{loanId}}",
+                    "return"
+                  ]
+                },
+                "description": "Return an open loan, calculate a fine of $0.50 per late day, mark the book available, and append a return email to outbox.txt. No request body is needed.\n\nExpected success: HTTP 200.\n\nWARNING: This request modifies the local database.\nHTTP 404: loan not found.\nHTTP 409: loan already returned."
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"loan not found\"\n}"
+            },
+            {
+              "name": "HTTP 409 - loan already returned",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/loans/{{loanId}}/return",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "loans",
+                    "{{loanId}}",
+                    "return"
+                  ]
+                },
+                "description": "Return an open loan, calculate a fine of $0.50 per late day, mark the book available, and append a return email to outbox.txt. No request body is needed.\n\nExpected success: HTTP 200.\n\nWARNING: This request modifies the local database.\nHTTP 404: loan not found.\nHTTP 409: loan already returned."
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"loan already returned\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Renew a loan",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/loans/{{loanId}}/renew",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "loans",
+                "{{loanId}}",
+                "renew"
+              ]
+            },
+            "description": "Extend the existing due date by 14 days and append a renewal email to outbox.txt. A loan may be renewed once, including on its due date, but never after return or when overdue. No request body is needed.\n\nExpected success: HTTP 200.\n\nWARNING: This request modifies the local database.\nHTTP 404: loan not found.\nHTTP 409: loan already returned; overdue loans cannot be renewed; loan was already renewed."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Expected success status: 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "let responseBody;",
+                  "pm.test(\"Response is valid JSON\", function () {",
+                  "    responseBody = pm.response.json();",
+                  "    pm.expect(responseBody).to.not.equal(null);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "HTTP 200 - Example",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/loans/{{loanId}}/renew",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "loans",
+                    "{{loanId}}",
+                    "renew"
+                  ]
+                },
+                "description": "Extend the existing due date by 14 days and append a renewal email to outbox.txt. A loan may be renewed once, including on its due date, but never after return or when overdue. No request body is needed.\n\nExpected success: HTTP 200.\n\nWARNING: This request modifies the local database.\nHTTP 404: loan not found.\nHTTP 409: loan already returned; overdue loans cannot be renewed; loan was already renewed."
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": 2,\n  \"book_id\": 1,\n  \"member_id\": 1,\n  \"due_date\": \"2026-12-05\",\n  \"returned\": false,\n  \"fine\": 0.0,\n  \"fine_paid\": false,\n  \"renewals\": 1,\n  \"checked_out\": \"2026-11-07\"\n}"
+            },
+            {
+              "name": "HTTP 404 - loan not found",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/loans/{{loanId}}/renew",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "loans",
+                    "{{loanId}}",
+                    "renew"
+                  ]
+                },
+                "description": "Extend the existing due date by 14 days and append a renewal email to outbox.txt. A loan may be renewed once, including on its due date, but never after return or when overdue. No request body is needed.\n\nExpected success: HTTP 200.\n\nWARNING: This request modifies the local database.\nHTTP 404: loan not found.\nHTTP 409: loan already returned; overdue loans cannot be renewed; loan was already renewed."
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"loan not found\"\n}"
+            },
+            {
+              "name": "HTTP 409 - loan already returned",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/loans/{{loanId}}/renew",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "loans",
+                    "{{loanId}}",
+                    "renew"
+                  ]
+                },
+                "description": "Extend the existing due date by 14 days and append a renewal email to outbox.txt. A loan may be renewed once, including on its due date, but never after return or when overdue. No request body is needed.\n\nExpected success: HTTP 200.\n\nWARNING: This request modifies the local database.\nHTTP 404: loan not found.\nHTTP 409: loan already returned; overdue loans cannot be renewed; loan was already renewed."
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"loan already returned\"\n}"
+            },
+            {
+              "name": "HTTP 409 - overdue loans cannot be renewed",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/loans/{{loanId}}/renew",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "loans",
+                    "{{loanId}}",
+                    "renew"
+                  ]
+                },
+                "description": "Extend the existing due date by 14 days and append a renewal email to outbox.txt. A loan may be renewed once, including on its due date, but never after return or when overdue. No request body is needed.\n\nExpected success: HTTP 200.\n\nWARNING: This request modifies the local database.\nHTTP 404: loan not found.\nHTTP 409: loan already returned; overdue loans cannot be renewed; loan was already renewed."
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"overdue loans cannot be renewed\"\n}"
+            },
+            {
+              "name": "HTTP 409 - loan was already renewed",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/loans/{{loanId}}/renew",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "loans",
+                    "{{loanId}}",
+                    "renew"
+                  ]
+                },
+                "description": "Extend the existing due date by 14 days and append a renewal email to outbox.txt. A loan may be renewed once, including on its due date, but never after return or when overdue. No request body is needed.\n\nExpected success: HTTP 200.\n\nWARNING: This request modifies the local database.\nHTTP 404: loan not found.\nHTTP 409: loan already returned; overdue loans cannot be renewed; loan was already renewed."
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"loan was already renewed\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Pay a fine",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/loans/{{loanId}}/pay-fine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "loans",
+                "{{loanId}}",
+                "pay-fine"
+              ]
+            },
+            "description": "Mark a positive unpaid fine as paid after the book has been returned, and append a payment email to outbox.txt. The stored fine remains visible. No request body is needed.\n\nExpected success: HTTP 200.\n\nWARNING: This request modifies the local database. The normal on-time workflow has no fine and returns 409 here. Select a returned loan with a positive unpaid fine before sending.\nHTTP 404: loan not found.\nHTTP 409: return the book before paying; no fine to pay."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Expected success status: 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "let responseBody;",
+                  "pm.test(\"Response is valid JSON\", function () {",
+                  "    responseBody = pm.response.json();",
+                  "    pm.expect(responseBody).to.not.equal(null);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "HTTP 200 - Example",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/loans/{{loanId}}/pay-fine",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "loans",
+                    "{{loanId}}",
+                    "pay-fine"
+                  ]
+                },
+                "description": "Mark a positive unpaid fine as paid after the book has been returned, and append a payment email to outbox.txt. The stored fine remains visible. No request body is needed.\n\nExpected success: HTTP 200.\n\nWARNING: This request modifies the local database. The normal on-time workflow has no fine and returns 409 here. Select a returned loan with a positive unpaid fine before sending.\nHTTP 404: loan not found.\nHTTP 409: return the book before paying; no fine to pay."
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": 1,\n  \"book_id\": 5,\n  \"member_id\": 3,\n  \"due_date\": \"2026-11-02\",\n  \"returned\": true,\n  \"fine\": 2.5,\n  \"fine_paid\": true,\n  \"renewals\": 0,\n  \"checked_out\": \"2026-10-19\"\n}"
+            },
+            {
+              "name": "HTTP 404 - loan not found",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/loans/{{loanId}}/pay-fine",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "loans",
+                    "{{loanId}}",
+                    "pay-fine"
+                  ]
+                },
+                "description": "Mark a positive unpaid fine as paid after the book has been returned, and append a payment email to outbox.txt. The stored fine remains visible. No request body is needed.\n\nExpected success: HTTP 200.\n\nWARNING: This request modifies the local database. The normal on-time workflow has no fine and returns 409 here. Select a returned loan with a positive unpaid fine before sending.\nHTTP 404: loan not found.\nHTTP 409: return the book before paying; no fine to pay."
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"loan not found\"\n}"
+            },
+            {
+              "name": "HTTP 409 - return the book before paying",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/loans/{{loanId}}/pay-fine",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "loans",
+                    "{{loanId}}",
+                    "pay-fine"
+                  ]
+                },
+                "description": "Mark a positive unpaid fine as paid after the book has been returned, and append a payment email to outbox.txt. The stored fine remains visible. No request body is needed.\n\nExpected success: HTTP 200.\n\nWARNING: This request modifies the local database. The normal on-time workflow has no fine and returns 409 here. Select a returned loan with a positive unpaid fine before sending.\nHTTP 404: loan not found.\nHTTP 409: return the book before paying; no fine to pay."
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"return the book before paying\"\n}"
+            },
+            {
+              "name": "HTTP 409 - no fine to pay",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/loans/{{loanId}}/pay-fine",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "loans",
+                    "{{loanId}}",
+                    "pay-fine"
+                  ]
+                },
+                "description": "Mark a positive unpaid fine as paid after the book has been returned, and append a payment email to outbox.txt. The stored fine remains visible. No request body is needed.\n\nExpected success: HTTP 200.\n\nWARNING: This request modifies the local database. The normal on-time workflow has no fine and returns 409 here. Select a returned loan with a positive unpaid fine before sending.\nHTTP 404: loan not found.\nHTTP 409: return the book before paying; no fine to pay."
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"no fine to pay\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "description": "Inspect overdue loans and library totals.",
+      "item": [
+        {
+          "name": "Get overdue report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/overdue",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "overdue"
+              ]
+            },
+            "description": "List open overdue loans with book/member names and accruing fines, plus their total.\n\nExpected success: HTTP 200."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Expected success status: 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "let responseBody;",
+                  "pm.test(\"Response is valid JSON\", function () {",
+                  "    responseBody = pm.response.json();",
+                  "    pm.expect(responseBody).to.not.equal(null);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "HTTP 200 - Example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/reports/overdue",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "reports",
+                    "overdue"
+                  ]
+                },
+                "description": "List open overdue loans with book/member names and accruing fines, plus their total.\n\nExpected success: HTTP 200."
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"items\": [\n    {\n      \"loan_id\": 1,\n      \"title\": \"Code Complete\",\n      \"member\": \"Alex Chen\",\n      \"days_late\": 5,\n      \"fine\": 2.5\n    }\n  ],\n  \"total_fines\": 2.5\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get library summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "summary"
+              ]
+            },
+            "description": "Return total books, open loans, and all outstanding fines (including accruing fines on open loans).\n\nExpected success: HTTP 200."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Expected success status: 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "let responseBody;",
+                  "pm.test(\"Response is valid JSON\", function () {",
+                  "    responseBody = pm.response.json();",
+                  "    pm.expect(responseBody).to.not.equal(null);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "HTTP 200 - Example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/reports/summary",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "reports",
+                    "summary"
+                  ]
+                },
+                "description": "Return total books, open loans, and all outstanding fines (including accruing fines on open loans).\n\nExpected success: HTTP 200."
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"total_books\": 5,\n  \"on_loan\": 1,\n  \"fines_outstanding\": 2.5\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Documentation",
+      "description": "Read-only documentation endpoints. Loading these does not mutate library data.",
+      "item": [
+        {
+          "name": "Swagger UI",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/html"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/docs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "docs"
+              ]
+            },
+            "description": "Read-only. Expected success: HTTP 200. Returns the Swagger UI HTML; open {{baseUrl}}/docs in a browser for the interactive UI."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Expected success status: 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Swagger HTML is returned\", function () {",
+                  "    pm.expect(pm.response.text()).to.include(\"SwaggerUIBundle\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "HTTP 200 - Documentation",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "text/html"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/docs",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "docs"
+                  ]
+                },
+                "description": "Read-only. Expected success: HTTP 200. Returns the Swagger UI HTML; open {{baseUrl}}/docs in a browser for the interactive UI."
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "text/html"
+                }
+              ],
+              "body": "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n  <title>Library Management API | Documentation</title>\n  <link rel=\"stylesheet\" href=\"/static/swagger-ui/swagger-ui.css\">\n  <style>body { margin: 0; background: #fafafa; }</style>\n</head>\n<body>\n  <noscript>Enable JavaScript to use the interactive API documentation.</noscript>\n  <div id=\"swagger-ui\"></div>\n  <script src=\"/static/swagger-ui/swagger-ui-bundle.js\"></script>\n  <script>\n    window.ui = SwaggerUIBundle({\n      url: \"/openapi.json\",\n      dom_id: \"#swagger-ui\",\n      deepLinking: true,\n      filter: true,\n      docExpansion: \"list\",\n      defaultModelsExpandDepth: 1,\n      defaultModelExpandDepth: 2,\n      displayRequestDuration: true,\n      validatorUrl: null,\n      supportedSubmitMethods: [\"get\", \"post\", \"delete\"],\n      presets: [SwaggerUIBundle.presets.apis],\n      layout: \"BaseLayout\"\n    });\n  </script>\n</body>\n</html>"
+            }
+          ]
+        },
+        {
+          "name": "OpenAPI specification",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/openapi.json",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "openapi.json"
+              ]
+            },
+            "description": "Read-only. Expected success: HTTP 200. Returns the OpenAPI 3.0.3 document for all 16 library operations."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Expected success status: 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Response is valid OpenAPI JSON\", function () {",
+                  "    const document = pm.response.json();",
+                  "    pm.expect(document.openapi).to.equal(\"3.0.3\");",
+                  "    pm.expect(document.info.title).to.equal(\"Library Management API\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "HTTP 200 - Documentation",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/openapi.json",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "openapi.json"
+                  ]
+                },
+                "description": "Read-only. Expected success: HTTP 200. Returns the OpenAPI 3.0.3 document for all 16 library operations."
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\r\n  \"openapi\": \"3.0.3\",\r\n  \"info\": {\r\n    \"title\": \"Library Management API\",\r\n    \"version\": \"1.0.0\",\r\n    \"description\": \"Campus library books, members, loans, and reports. Use Try it out to send requests to this running API. POST and DELETE operations change library data; loan operations also append notification emails to outbox.txt. Opening this documentation does not execute API operations. Examples are illustrative; IDs, dates, and balances depend on your data and the current date. No authentication is required.\"\r\n  },\r\n  \"servers\": [\r\n    {\r\n      \"url\": \"/\",\r\n      \"description\": \"This Flask server\"\r\n    }\r\n  ],\r\n  \"tags\": [\r\n    {\r\n      \"name\": \"Books\",\r\n      \"description\": \"Browse and manage the book catalog.\"\r\n    },\r\n    {\r\n      \"name\": \"Members\",\r\n      \"description\": \"Register members and inspect their borrowing accounts.\"\r\n    },\r\n    {\r\n      \"name\": \"Loans\",\r\n      \"description\": \"Check out, return, renew, and pay fines.\"\r\n    },\r\n    {\r\n      \"name\": \"Reports\",\r\n      \"description\": \"Inspect overdue loans and library totals.\"\r\n    }\r\n  ],\r\n  \"paths\": {\r\n    \"/books\": {\r\n      \"get\": {\r\n        \"tags\": [\r\n          \"Books\"\r\n        ],\r\n        \"operationId\": \"listBooks\",\r\n        \"summary\": \"List books\",\r\n        \"description\": \"List all books, optionally filtering to available books.\",\r\n        \"responses\": {\r\n          \"200\": {\r\n            \"description\": \"Successful response\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"type\": \"array\",\r\n                  \"items\": {\r\n                    \"$ref\": \"#/components/schemas/Book\"\r\n                  }\r\n                },\r\n                \"example\": [\r\n                  {\r\n                    \"id\": 1,\r\n                    \"title\": \"Clean Code\",\r\n                    \"author\": \"Robert C. Martin\",\r\n                    \"isbn\": \"9780132350884\",\r\n                    \"available\": true\r\n                  }\r\n                ]\r\n              }\r\n            }\r\n          }\r\n        },\r\n        \"parameters\": [\r\n          {\r\n            \"name\": \"available\",\r\n            \"in\": \"query\",\r\n            \"required\": false,\r\n            \"description\": \"Filter to books available for checkout. Only the exact lowercase string `true` enables filtering; any other value leaves the list unfiltered.\",\r\n            \"schema\": {\r\n              \"type\": \"string\"\r\n            },\r\n            \"example\": \"true\"\r\n          }\r\n        ]\r\n      },\r\n      \"post\": {\r\n        \"tags\": [\r\n          \"Books\"\r\n        ],\r\n        \"operationId\": \"createBook\",\r\n        \"summary\": \"Add a book\",\r\n        \"description\": \"Create a book with an available status. ISBN hyphens are preserved.\",\r\n        \"responses\": {\r\n          \"201\": {\r\n            \"description\": \"Created\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"$ref\": \"#/components/schemas/Book\"\r\n                },\r\n                \"example\": {\r\n                  \"id\": 6,\r\n                  \"title\": \"Dune\",\r\n                  \"author\": \"Frank Herbert\",\r\n                  \"isbn\": \"978-0441013593\",\r\n                  \"available\": true\r\n                }\r\n              }\r\n            }\r\n          },\r\n          \"400\": {\r\n            \"description\": \"title and author are required; invalid isbn.\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"$ref\": \"#/components/schemas/Error\"\r\n                },\r\n                \"examples\": {\r\n                  \"1\": {\r\n                    \"summary\": \"title and author are required\",\r\n                    \"value\": {\r\n                      \"error\": \"title and author are required\"\r\n                    }\r\n                  },\r\n                  \"2\": {\r\n                    \"summary\": \"invalid isbn\",\r\n                    \"value\": {\r\n                      \"error\": \"invalid isbn\"\r\n                    }\r\n                  }\r\n                }\r\n              }\r\n            }\r\n          }\r\n        },\r\n        \"requestBody\": {\r\n          \"required\": true,\r\n          \"description\": \"JSON object. Missing or malformed JSON is treated as an empty object.\",\r\n          \"content\": {\r\n            \"application/json\": {\r\n              \"schema\": {\r\n                \"$ref\": \"#/components/schemas/CreateBook\"\r\n              },\r\n              \"example\": {\r\n                \"title\": \"Dune\",\r\n                \"author\": \"Frank Herbert\",\r\n                \"isbn\": \"978-0441013593\"\r\n              }\r\n            }\r\n          }\r\n        }\r\n      }\r\n    },\r\n    \"/books/{book_id}\": {\r\n      \"get\": {\r\n        \"tags\": [\r\n          \"Books\"\r\n        ],\r\n        \"operationId\": \"getBook\",\r\n        \"summary\": \"Get a book\",\r\n        \"description\": \"Look up a book by its ID.\",\r\n        \"responses\": {\r\n          \"200\": {\r\n            \"description\": \"Successful response\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"$ref\": \"#/components/schemas/Book\"\r\n                },\r\n                \"example\": {\r\n                  \"id\": 1,\r\n                  \"title\": \"Clean Code\",\r\n                  \"author\": \"Robert C. Martin\",\r\n                  \"isbn\": \"9780132350884\",\r\n                  \"available\": true\r\n                }\r\n              }\r\n            }\r\n          },\r\n          \"404\": {\r\n            \"description\": \"book not found.\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"$ref\": \"#/components/schemas/Error\"\r\n                },\r\n                \"examples\": {\r\n                  \"1\": {\r\n                    \"summary\": \"book not found\",\r\n                    \"value\": {\r\n                      \"error\": \"book not found\"\r\n                    }\r\n                  }\r\n                }\r\n              }\r\n            }\r\n          }\r\n        },\r\n        \"parameters\": [\r\n          {\r\n            \"name\": \"book_id\",\r\n            \"in\": \"path\",\r\n            \"required\": true,\r\n            \"description\": \"Book id.\",\r\n            \"schema\": {\r\n              \"type\": \"integer\",\r\n              \"minimum\": 0\r\n            },\r\n            \"example\": 1\r\n          }\r\n        ]\r\n      },\r\n      \"delete\": {\r\n        \"tags\": [\r\n          \"Books\"\r\n        ],\r\n        \"operationId\": \"deleteBook\",\r\n        \"summary\": \"Delete a book\",\r\n        \"description\": \"Delete an available book. A book on loan cannot be deleted.\",\r\n        \"parameters\": [\r\n          {\r\n            \"name\": \"book_id\",\r\n            \"in\": \"path\",\r\n            \"required\": true,\r\n            \"description\": \"Book id.\",\r\n            \"schema\": {\r\n              \"type\": \"integer\",\r\n              \"minimum\": 0\r\n            },\r\n            \"example\": 1\r\n          }\r\n        ],\r\n        \"responses\": {\r\n          \"204\": {\r\n            \"description\": \"Book deleted. Empty response body.\"\r\n          },\r\n          \"404\": {\r\n            \"description\": \"book not found.\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"$ref\": \"#/components/schemas/Error\"\r\n                },\r\n                \"examples\": {\r\n                  \"1\": {\r\n                    \"summary\": \"book not found\",\r\n                    \"value\": {\r\n                      \"error\": \"book not found\"\r\n                    }\r\n                  }\r\n                }\r\n              }\r\n            }\r\n          },\r\n          \"409\": {\r\n            \"description\": \"book is on loan.\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"$ref\": \"#/components/schemas/Error\"\r\n                },\r\n                \"examples\": {\r\n                  \"1\": {\r\n                    \"summary\": \"book is on loan\",\r\n                    \"value\": {\r\n                      \"error\": \"book is on loan\"\r\n                    }\r\n                  }\r\n                }\r\n              }\r\n            }\r\n          }\r\n        }\r\n      }\r\n    },\r\n    \"/members\": {\r\n      \"get\": {\r\n        \"tags\": [\r\n          \"Members\"\r\n        ],\r\n        \"operationId\": \"listMembers\",\r\n        \"summary\": \"List members\",\r\n        \"description\": \"List all registered members.\",\r\n        \"responses\": {\r\n          \"200\": {\r\n            \"description\": \"Successful response\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"type\": \"array\",\r\n                  \"items\": {\r\n                    \"$ref\": \"#/components/schemas/Member\"\r\n                  }\r\n                },\r\n                \"example\": [\r\n                  {\r\n                    \"id\": 2,\r\n                    \"name\": \"Dr. Noor Aziz\",\r\n                    \"email\": \"noor@campus.edu\",\r\n                    \"type\": \"staff\"\r\n                  }\r\n                ]\r\n              }\r\n            }\r\n          }\r\n        }\r\n      },\r\n      \"post\": {\r\n        \"tags\": [\r\n          \"Members\"\r\n        ],\r\n        \"operationId\": \"createMember\",\r\n        \"summary\": \"Register a member\",\r\n        \"description\": \"Register a member with a unique email. Member type defaults to student.\",\r\n        \"responses\": {\r\n          \"201\": {\r\n            \"description\": \"Created\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"$ref\": \"#/components/schemas/Member\"\r\n                },\r\n                \"example\": {\r\n                  \"id\": 4,\r\n                  \"name\": \"Lee Park\",\r\n                  \"email\": \"lee@campus.edu\",\r\n                  \"type\": \"student\"\r\n                }\r\n              }\r\n            }\r\n          },\r\n          \"400\": {\r\n            \"description\": \"name is required; invalid email; type must be student or staff.\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"$ref\": \"#/components/schemas/Error\"\r\n                },\r\n                \"examples\": {\r\n                  \"1\": {\r\n                    \"summary\": \"name is required\",\r\n                    \"value\": {\r\n                      \"error\": \"name is required\"\r\n                    }\r\n                  },\r\n                  \"2\": {\r\n                    \"summary\": \"invalid email\",\r\n                    \"value\": {\r\n                      \"error\": \"invalid email\"\r\n                    }\r\n                  },\r\n                  \"3\": {\r\n                    \"summary\": \"type must be student or staff\",\r\n                    \"value\": {\r\n                      \"error\": \"type must be student or staff\"\r\n                    }\r\n                  }\r\n                }\r\n              }\r\n            }\r\n          },\r\n          \"409\": {\r\n            \"description\": \"email already registered.\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"$ref\": \"#/components/schemas/Error\"\r\n                },\r\n                \"examples\": {\r\n                  \"1\": {\r\n                    \"summary\": \"email already registered\",\r\n                    \"value\": {\r\n                      \"error\": \"email already registered\"\r\n                    }\r\n                  }\r\n                }\r\n              }\r\n            }\r\n          }\r\n        },\r\n        \"requestBody\": {\r\n          \"required\": true,\r\n          \"description\": \"JSON object. Missing or malformed JSON is treated as an empty object.\",\r\n          \"content\": {\r\n            \"application/json\": {\r\n              \"schema\": {\r\n                \"$ref\": \"#/components/schemas/CreateMember\"\r\n              },\r\n              \"example\": {\r\n                \"name\": \"Lee Park\",\r\n                \"email\": \"lee@campus.edu\"\r\n              }\r\n            }\r\n          }\r\n        }\r\n      }\r\n    },\r\n    \"/members/{member_id}\": {\r\n      \"get\": {\r\n        \"tags\": [\r\n          \"Members\"\r\n        ],\r\n        \"operationId\": \"getMember\",\r\n        \"summary\": \"Get a member\",\r\n        \"description\": \"Look up a registered member by ID.\",\r\n        \"responses\": {\r\n          \"200\": {\r\n            \"description\": \"Successful response\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"$ref\": \"#/components/schemas/Member\"\r\n                },\r\n                \"example\": {\r\n                  \"id\": 2,\r\n                  \"name\": \"Dr. Noor Aziz\",\r\n                  \"email\": \"noor@campus.edu\",\r\n                  \"type\": \"staff\"\r\n                }\r\n              }\r\n            }\r\n          },\r\n          \"404\": {\r\n            \"description\": \"member not found.\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"$ref\": \"#/components/schemas/Error\"\r\n                },\r\n                \"examples\": {\r\n                  \"1\": {\r\n                    \"summary\": \"member not found\",\r\n                    \"value\": {\r\n                      \"error\": \"member not found\"\r\n                    }\r\n                  }\r\n                }\r\n              }\r\n            }\r\n          }\r\n        },\r\n        \"parameters\": [\r\n          {\r\n            \"name\": \"member_id\",\r\n            \"in\": \"path\",\r\n            \"required\": true,\r\n            \"description\": \"Member id.\",\r\n            \"schema\": {\r\n              \"type\": \"integer\",\r\n              \"minimum\": 0\r\n            },\r\n            \"example\": 1\r\n          }\r\n        ]\r\n      }\r\n    },\r\n    \"/members/{member_id}/loans\": {\r\n      \"get\": {\r\n        \"tags\": [\r\n          \"Members\"\r\n        ],\r\n        \"operationId\": \"getMemberAccount\",\r\n        \"summary\": \"Get member loans and balance\",\r\n        \"description\": \"Return loan history, unpaid balance, and remaining loan allowance. Open overdue loans accrue fines.\",\r\n        \"responses\": {\r\n          \"200\": {\r\n            \"description\": \"Successful response\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"$ref\": \"#/components/schemas/MemberAccount\"\r\n                },\r\n                \"example\": {\r\n                  \"loans\": [\r\n                    {\r\n                      \"id\": 1,\r\n                      \"book_id\": 5,\r\n                      \"due_date\": \"2026-11-02\",\r\n                      \"returned\": false,\r\n                      \"fine\": 0.0,\r\n                      \"fine_paid\": false\r\n                    }\r\n                  ],\r\n                  \"total_owed\": 2.5,\r\n                  \"loans_remaining\": 2\r\n                }\r\n              }\r\n            }\r\n          },\r\n          \"404\": {\r\n            \"description\": \"member not found.\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"$ref\": \"#/components/schemas/Error\"\r\n                },\r\n                \"examples\": {\r\n                  \"1\": {\r\n                    \"summary\": \"member not found\",\r\n                    \"value\": {\r\n                      \"error\": \"member not found\"\r\n                    }\r\n                  }\r\n                }\r\n              }\r\n            }\r\n          }\r\n        },\r\n        \"parameters\": [\r\n          {\r\n            \"name\": \"member_id\",\r\n            \"in\": \"path\",\r\n            \"required\": true,\r\n            \"description\": \"Member id.\",\r\n            \"schema\": {\r\n              \"type\": \"integer\",\r\n              \"minimum\": 0\r\n            },\r\n            \"example\": 1\r\n          }\r\n        ]\r\n      }\r\n    },\r\n    \"/loans\": {\r\n      \"get\": {\r\n        \"tags\": [\r\n          \"Loans\"\r\n        ],\r\n        \"operationId\": \"listLoans\",\r\n        \"summary\": \"List loans\",\r\n        \"description\": \"List loans, including current fines. The overdue filter includes only open loans with a due date before today.\",\r\n        \"responses\": {\r\n          \"200\": {\r\n            \"description\": \"Successful response\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"type\": \"array\",\r\n                  \"items\": {\r\n                    \"$ref\": \"#/components/schemas/LoanDetail\"\r\n                  }\r\n                },\r\n                \"example\": [\r\n                  {\r\n                    \"id\": 1,\r\n                    \"book_id\": 5,\r\n                    \"member_id\": 3,\r\n                    \"due_date\": \"2026-11-02\",\r\n                    \"returned\": false,\r\n                    \"fine\": 0.0,\r\n                    \"fine_paid\": false,\r\n                    \"renewals\": 0,\r\n                    \"checked_out\": \"2026-10-19\",\r\n                    \"current_fine\": 2.5\r\n                  }\r\n                ]\r\n              }\r\n            }\r\n          }\r\n        },\r\n        \"parameters\": [\r\n          {\r\n            \"name\": \"overdue\",\r\n            \"in\": \"query\",\r\n            \"required\": false,\r\n            \"description\": \"Filter to open overdue loans. Only the exact lowercase string `true` enables filtering; any other value leaves the list unfiltered.\",\r\n            \"schema\": {\r\n              \"type\": \"string\"\r\n            },\r\n            \"example\": \"true\"\r\n          }\r\n        ]\r\n      },\r\n      \"post\": {\r\n        \"tags\": [\r\n          \"Loans\"\r\n        ],\r\n        \"operationId\": \"createLoan\",\r\n        \"summary\": \"Check out a book\",\r\n        \"description\": \"Create a loan, mark the book unavailable, and append a checkout email to outbox.txt. Loans default to 14 days. Students may have 3 open loans; staff may have 5. Members with unpaid fines cannot borrow.\",\r\n        \"responses\": {\r\n          \"201\": {\r\n            \"description\": \"Created\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"$ref\": \"#/components/schemas/Loan\"\r\n                },\r\n                \"example\": {\r\n                  \"id\": 2,\r\n                  \"book_id\": 1,\r\n                  \"member_id\": 1,\r\n                  \"due_date\": \"2026-11-21\",\r\n                  \"returned\": false,\r\n                  \"fine\": 0.0,\r\n                  \"fine_paid\": false,\r\n                  \"renewals\": 0,\r\n                  \"checked_out\": \"2026-11-07\"\r\n                }\r\n              }\r\n            }\r\n          },\r\n          \"400\": {\r\n            \"description\": \"book_id and member_id are required; invalid due_date.\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"$ref\": \"#/components/schemas/Error\"\r\n                },\r\n                \"examples\": {\r\n                  \"1\": {\r\n                    \"summary\": \"book_id and member_id are required\",\r\n                    \"value\": {\r\n                      \"error\": \"book_id and member_id are required\"\r\n                    }\r\n                  },\r\n                  \"2\": {\r\n                    \"summary\": \"invalid due_date\",\r\n                    \"value\": {\r\n                      \"error\": \"invalid due_date\"\r\n                    }\r\n                  }\r\n                }\r\n              }\r\n            }\r\n          },\r\n          \"404\": {\r\n            \"description\": \"book not found; member not found.\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"$ref\": \"#/components/schemas/Error\"\r\n                },\r\n                \"examples\": {\r\n                  \"1\": {\r\n                    \"summary\": \"book not found\",\r\n                    \"value\": {\r\n                      \"error\": \"book not found\"\r\n                    }\r\n                  },\r\n                  \"2\": {\r\n                    \"summary\": \"member not found\",\r\n                    \"value\": {\r\n                      \"error\": \"member not found\"\r\n                    }\r\n                  }\r\n                }\r\n              }\r\n            }\r\n          },\r\n          \"409\": {\r\n            \"description\": \"book is not available; member has unpaid fines; loan limit reached.\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"$ref\": \"#/components/schemas/Error\"\r\n                },\r\n                \"examples\": {\r\n                  \"1\": {\r\n                    \"summary\": \"book is not available\",\r\n                    \"value\": {\r\n                      \"error\": \"book is not available\"\r\n                    }\r\n                  },\r\n                  \"2\": {\r\n                    \"summary\": \"member has unpaid fines\",\r\n                    \"value\": {\r\n                      \"error\": \"member has unpaid fines\"\r\n                    }\r\n                  },\r\n                  \"3\": {\r\n                    \"summary\": \"loan limit reached\",\r\n                    \"value\": {\r\n                      \"error\": \"loan limit reached\"\r\n                    }\r\n                  }\r\n                }\r\n              }\r\n            }\r\n          }\r\n        },\r\n        \"requestBody\": {\r\n          \"required\": true,\r\n          \"description\": \"JSON object. Missing or malformed JSON is treated as an empty object.\",\r\n          \"content\": {\r\n            \"application/json\": {\r\n              \"schema\": {\r\n                \"$ref\": \"#/components/schemas/CreateLoan\"\r\n              },\r\n              \"example\": {\r\n                \"book_id\": 1,\r\n                \"member_id\": 1\r\n              }\r\n            }\r\n          }\r\n        }\r\n      }\r\n    },\r\n    \"/loans/{loan_id}\": {\r\n      \"get\": {\r\n        \"tags\": [\r\n          \"Loans\"\r\n        ],\r\n        \"operationId\": \"getLoan\",\r\n        \"summary\": \"Get a loan\",\r\n        \"description\": \"Look up a loan and its current fine. Returned loans retain their stored fine even when paid.\",\r\n        \"responses\": {\r\n          \"200\": {\r\n            \"description\": \"Successful response\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"$ref\": \"#/components/schemas/LoanDetail\"\r\n                },\r\n                \"example\": {\r\n                  \"id\": 1,\r\n                  \"book_id\": 5,\r\n                  \"member_id\": 3,\r\n                  \"due_date\": \"2026-11-02\",\r\n                  \"returned\": false,\r\n                  \"fine\": 0.0,\r\n                  \"fine_paid\": false,\r\n                  \"renewals\": 0,\r\n                  \"checked_out\": \"2026-10-19\",\r\n                  \"current_fine\": 2.5\r\n                }\r\n              }\r\n            }\r\n          },\r\n          \"404\": {\r\n            \"description\": \"loan not found.\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"$ref\": \"#/components/schemas/Error\"\r\n                },\r\n                \"examples\": {\r\n                  \"1\": {\r\n                    \"summary\": \"loan not found\",\r\n                    \"value\": {\r\n                      \"error\": \"loan not found\"\r\n                    }\r\n                  }\r\n                }\r\n              }\r\n            }\r\n          }\r\n        },\r\n        \"parameters\": [\r\n          {\r\n            \"name\": \"loan_id\",\r\n            \"in\": \"path\",\r\n            \"required\": true,\r\n            \"description\": \"Loan id.\",\r\n            \"schema\": {\r\n              \"type\": \"integer\",\r\n              \"minimum\": 0\r\n            },\r\n            \"example\": 1\r\n          }\r\n        ]\r\n      }\r\n    },\r\n    \"/loans/{loan_id}/return\": {\r\n      \"post\": {\r\n        \"tags\": [\r\n          \"Loans\"\r\n        ],\r\n        \"operationId\": \"returnLoan\",\r\n        \"summary\": \"Return a book\",\r\n        \"description\": \"Return an open loan, calculate a fine of $0.50 per late day, mark the book available, and append a return email to outbox.txt. No request body is needed.\",\r\n        \"responses\": {\r\n          \"200\": {\r\n            \"description\": \"Successful response\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"$ref\": \"#/components/schemas/Loan\"\r\n                },\r\n                \"example\": {\r\n                  \"id\": 1,\r\n                  \"book_id\": 5,\r\n                  \"member_id\": 3,\r\n                  \"due_date\": \"2026-11-02\",\r\n                  \"returned\": true,\r\n                  \"fine\": 2.5,\r\n                  \"fine_paid\": false,\r\n                  \"renewals\": 0,\r\n                  \"checked_out\": \"2026-10-19\"\r\n                }\r\n              }\r\n            }\r\n          },\r\n          \"404\": {\r\n            \"description\": \"loan not found.\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"$ref\": \"#/components/schemas/Error\"\r\n                },\r\n                \"examples\": {\r\n                  \"1\": {\r\n                    \"summary\": \"loan not found\",\r\n                    \"value\": {\r\n                      \"error\": \"loan not found\"\r\n                    }\r\n                  }\r\n                }\r\n              }\r\n            }\r\n          },\r\n          \"409\": {\r\n            \"description\": \"loan already returned.\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"$ref\": \"#/components/schemas/Error\"\r\n                },\r\n                \"examples\": {\r\n                  \"1\": {\r\n                    \"summary\": \"loan already returned\",\r\n                    \"value\": {\r\n                      \"error\": \"loan already returned\"\r\n                    }\r\n                  }\r\n                }\r\n              }\r\n            }\r\n          }\r\n        },\r\n        \"parameters\": [\r\n          {\r\n            \"name\": \"loan_id\",\r\n            \"in\": \"path\",\r\n            \"required\": true,\r\n            \"description\": \"Loan id.\",\r\n            \"schema\": {\r\n              \"type\": \"integer\",\r\n              \"minimum\": 0\r\n            },\r\n            \"example\": 1\r\n          }\r\n        ]\r\n      }\r\n    },\r\n    \"/loans/{loan_id}/renew\": {\r\n      \"post\": {\r\n        \"tags\": [\r\n          \"Loans\"\r\n        ],\r\n        \"operationId\": \"renewLoan\",\r\n        \"summary\": \"Renew a loan\",\r\n        \"description\": \"Extend the existing due date by 14 days and append a renewal email to outbox.txt. A loan may be renewed once, including on its due date, but never after return or when overdue. No request body is needed.\",\r\n        \"responses\": {\r\n          \"200\": {\r\n            \"description\": \"Successful response\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"$ref\": \"#/components/schemas/Loan\"\r\n                },\r\n                \"example\": {\r\n                  \"id\": 2,\r\n                  \"book_id\": 1,\r\n                  \"member_id\": 1,\r\n                  \"due_date\": \"2026-12-05\",\r\n                  \"returned\": false,\r\n                  \"fine\": 0.0,\r\n                  \"fine_paid\": false,\r\n                  \"renewals\": 1,\r\n                  \"checked_out\": \"2026-11-07\"\r\n                }\r\n              }\r\n            }\r\n          },\r\n          \"404\": {\r\n            \"description\": \"loan not found.\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"$ref\": \"#/components/schemas/Error\"\r\n                },\r\n                \"examples\": {\r\n                  \"1\": {\r\n                    \"summary\": \"loan not found\",\r\n                    \"value\": {\r\n                      \"error\": \"loan not found\"\r\n                    }\r\n                  }\r\n                }\r\n              }\r\n            }\r\n          },\r\n          \"409\": {\r\n            \"description\": \"loan already returned; overdue loans cannot be renewed; loan was already renewed.\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"$ref\": \"#/components/schemas/Error\"\r\n                },\r\n                \"examples\": {\r\n                  \"1\": {\r\n                    \"summary\": \"loan already returned\",\r\n                    \"value\": {\r\n                      \"error\": \"loan already returned\"\r\n                    }\r\n                  },\r\n                  \"2\": {\r\n                    \"summary\": \"overdue loans cannot be renewed\",\r\n                    \"value\": {\r\n                      \"error\": \"overdue loans cannot be renewed\"\r\n                    }\r\n                  },\r\n                  \"3\": {\r\n                    \"summary\": \"loan was already renewed\",\r\n                    \"value\": {\r\n                      \"error\": \"loan was already renewed\"\r\n                    }\r\n                  }\r\n                }\r\n              }\r\n            }\r\n          }\r\n        },\r\n        \"parameters\": [\r\n          {\r\n            \"name\": \"loan_id\",\r\n            \"in\": \"path\",\r\n            \"required\": true,\r\n            \"description\": \"Loan id.\",\r\n            \"schema\": {\r\n              \"type\": \"integer\",\r\n              \"minimum\": 0\r\n            },\r\n            \"example\": 1\r\n          }\r\n        ]\r\n      }\r\n    },\r\n    \"/loans/{loan_id}/pay-fine\": {\r\n      \"post\": {\r\n        \"tags\": [\r\n          \"Loans\"\r\n        ],\r\n        \"operationId\": \"payFine\",\r\n        \"summary\": \"Pay a fine\",\r\n        \"description\": \"Mark a positive unpaid fine as paid after the book has been returned, and append a payment email to outbox.txt. The stored fine remains visible. No request body is needed.\",\r\n        \"responses\": {\r\n          \"200\": {\r\n            \"description\": \"Successful response\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"$ref\": \"#/components/schemas/Loan\"\r\n                },\r\n                \"example\": {\r\n                  \"id\": 1,\r\n                  \"book_id\": 5,\r\n                  \"member_id\": 3,\r\n                  \"due_date\": \"2026-11-02\",\r\n                  \"returned\": true,\r\n                  \"fine\": 2.5,\r\n                  \"fine_paid\": true,\r\n                  \"renewals\": 0,\r\n                  \"checked_out\": \"2026-10-19\"\r\n                }\r\n              }\r\n            }\r\n          },\r\n          \"404\": {\r\n            \"description\": \"loan not found.\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"$ref\": \"#/components/schemas/Error\"\r\n                },\r\n                \"examples\": {\r\n                  \"1\": {\r\n                    \"summary\": \"loan not found\",\r\n                    \"value\": {\r\n                      \"error\": \"loan not found\"\r\n                    }\r\n                  }\r\n                }\r\n              }\r\n            }\r\n          },\r\n          \"409\": {\r\n            \"description\": \"return the book before paying; no fine to pay.\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"$ref\": \"#/components/schemas/Error\"\r\n                },\r\n                \"examples\": {\r\n                  \"1\": {\r\n                    \"summary\": \"return the book before paying\",\r\n                    \"value\": {\r\n                      \"error\": \"return the book before paying\"\r\n                    }\r\n                  },\r\n                  \"2\": {\r\n                    \"summary\": \"no fine to pay\",\r\n                    \"value\": {\r\n                      \"error\": \"no fine to pay\"\r\n                    }\r\n                  }\r\n                }\r\n              }\r\n            }\r\n          }\r\n        },\r\n        \"parameters\": [\r\n          {\r\n            \"name\": \"loan_id\",\r\n            \"in\": \"path\",\r\n            \"required\": true,\r\n            \"description\": \"Loan id.\",\r\n            \"schema\": {\r\n              \"type\": \"integer\",\r\n              \"minimum\": 0\r\n            },\r\n            \"example\": 1\r\n          }\r\n        ]\r\n      }\r\n    },\r\n    \"/reports/overdue\": {\r\n      \"get\": {\r\n        \"tags\": [\r\n          \"Reports\"\r\n        ],\r\n        \"operationId\": \"overdueReport\",\r\n        \"summary\": \"Get overdue report\",\r\n        \"description\": \"List open overdue loans with book/member names and accruing fines, plus their total.\",\r\n        \"responses\": {\r\n          \"200\": {\r\n            \"description\": \"Successful response\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"$ref\": \"#/components/schemas/OverdueReport\"\r\n                },\r\n                \"example\": {\r\n                  \"items\": [\r\n                    {\r\n                      \"loan_id\": 1,\r\n                      \"title\": \"Code Complete\",\r\n                      \"member\": \"Alex Chen\",\r\n                      \"days_late\": 5,\r\n                      \"fine\": 2.5\r\n                    }\r\n                  ],\r\n                  \"total_fines\": 2.5\r\n                }\r\n              }\r\n            }\r\n          }\r\n        }\r\n      }\r\n    },\r\n    \"/reports/summary\": {\r\n      \"get\": {\r\n        \"tags\": [\r\n          \"Reports\"\r\n        ],\r\n        \"operationId\": \"summaryReport\",\r\n        \"summary\": \"Get library summary\",\r\n        \"description\": \"Return total books, open loans, and all outstanding fines (including accruing fines on open loans).\",\r\n        \"responses\": {\r\n          \"200\": {\r\n            \"description\": \"Successful response\",\r\n            \"content\": {\r\n              \"application/json\": {\r\n                \"schema\": {\r\n                  \"$ref\": \"#/components/schemas/SummaryReport\"\r\n                },\r\n                \"example\": {\r\n                  \"total_books\": 5,\r\n                  \"on_loan\": 1,\r\n                  \"fines_outstanding\": 2.5\r\n                }\r\n              }\r\n            }\r\n          }\r\n        }\r\n      }\r\n    }\r\n  },\r\n  \"components\": {\r\n    \"schemas\": {\r\n      \"Error\": {\r\n        \"type\": \"object\",\r\n        \"required\": [\r\n          \"error\"\r\n        ],\r\n        \"properties\": {\r\n          \"error\": {\r\n            \"type\": \"string\",\r\n            \"description\": \"Human-readable error message.\"\r\n          }\r\n        }\r\n      },\r\n      \"Book\": {\r\n        \"type\": \"object\",\r\n        \"required\": [\r\n          \"id\",\r\n          \"title\",\r\n          \"author\",\r\n          \"isbn\",\r\n          \"available\"\r\n        ],\r\n        \"properties\": {\r\n          \"id\": {\r\n            \"type\": \"integer\",\r\n            \"description\": \"Book ID.\"\r\n          },\r\n          \"title\": {\r\n            \"type\": \"string\",\r\n            \"description\": \"Book title.\"\r\n          },\r\n          \"author\": {\r\n            \"type\": \"string\",\r\n            \"description\": \"Author name.\"\r\n          },\r\n          \"isbn\": {\r\n            \"type\": \"string\",\r\n            \"description\": \"ISBN as supplied, including any hyphens.\"\r\n          },\r\n          \"available\": {\r\n            \"type\": \"boolean\",\r\n            \"description\": \"Whether the book can be checked out.\"\r\n          }\r\n        }\r\n      },\r\n      \"CreateBook\": {\r\n        \"type\": \"object\",\r\n        \"required\": [\r\n          \"title\",\r\n          \"author\",\r\n          \"isbn\"\r\n        ],\r\n        \"properties\": {\r\n          \"title\": {\r\n            \"type\": \"string\",\r\n            \"minLength\": 1\r\n          },\r\n          \"author\": {\r\n            \"type\": \"string\",\r\n            \"minLength\": 1\r\n          },\r\n          \"isbn\": {\r\n            \"type\": \"string\",\r\n            \"description\": \"10 or 13 digits after removing hyphens.\",\r\n            \"example\": \"978-0441013593\"\r\n          }\r\n        }\r\n      },\r\n      \"Member\": {\r\n        \"type\": \"object\",\r\n        \"required\": [\r\n          \"id\",\r\n          \"name\",\r\n          \"email\",\r\n          \"type\"\r\n        ],\r\n        \"properties\": {\r\n          \"id\": {\r\n            \"type\": \"integer\",\r\n            \"description\": \"Member ID.\"\r\n          },\r\n          \"name\": {\r\n            \"type\": \"string\",\r\n            \"description\": \"Member name.\"\r\n          },\r\n          \"email\": {\r\n            \"type\": \"string\",\r\n            \"format\": \"email\"\r\n          },\r\n          \"type\": {\r\n            \"type\": \"string\",\r\n            \"enum\": [\r\n              \"student\",\r\n              \"staff\"\r\n            ]\r\n          }\r\n        }\r\n      },\r\n      \"CreateMember\": {\r\n        \"type\": \"object\",\r\n        \"required\": [\r\n          \"name\",\r\n          \"email\"\r\n        ],\r\n        \"properties\": {\r\n          \"name\": {\r\n            \"type\": \"string\",\r\n            \"minLength\": 1\r\n          },\r\n          \"email\": {\r\n            \"type\": \"string\",\r\n            \"format\": \"email\",\r\n            \"description\": \"Must be unique and contain a non-whitespace local part, domain, and dotted suffix.\"\r\n          },\r\n          \"type\": {\r\n            \"type\": \"string\",\r\n            \"enum\": [\r\n              \"student\",\r\n              \"staff\"\r\n            ],\r\n            \"default\": \"student\"\r\n          }\r\n        }\r\n      },\r\n      \"Loan\": {\r\n        \"type\": \"object\",\r\n        \"required\": [\r\n          \"id\",\r\n          \"book_id\",\r\n          \"member_id\",\r\n          \"due_date\",\r\n          \"returned\",\r\n          \"fine\",\r\n          \"fine_paid\",\r\n          \"renewals\",\r\n          \"checked_out\"\r\n        ],\r\n        \"properties\": {\r\n          \"id\": {\r\n            \"type\": \"integer\",\r\n            \"description\": \"Loan ID.\"\r\n          },\r\n          \"book_id\": {\r\n            \"type\": \"integer\",\r\n            \"description\": \"Borrowed book ID.\"\r\n          },\r\n          \"member_id\": {\r\n            \"type\": \"integer\",\r\n            \"description\": \"Borrowing member ID.\"\r\n          },\r\n          \"due_date\": {\r\n            \"type\": \"string\",\r\n            \"format\": \"date\"\r\n          },\r\n          \"returned\": {\r\n            \"type\": \"boolean\"\r\n          },\r\n          \"fine\": {\r\n            \"type\": \"number\",\r\n            \"description\": \"Fine stored when returned; zero before return.\"\r\n          },\r\n          \"fine_paid\": {\r\n            \"type\": \"boolean\"\r\n          },\r\n          \"renewals\": {\r\n            \"type\": \"integer\",\r\n            \"description\": \"Number of renewals.\"\r\n          },\r\n          \"checked_out\": {\r\n            \"type\": \"string\",\r\n            \"format\": \"date\"\r\n          }\r\n        }\r\n      },\r\n      \"LoanDetail\": {\r\n        \"allOf\": [\r\n          {\r\n            \"$ref\": \"#/components/schemas/Loan\"\r\n          },\r\n          {\r\n            \"type\": \"object\",\r\n            \"required\": [\r\n              \"current_fine\"\r\n            ],\r\n            \"properties\": {\r\n              \"current_fine\": {\r\n                \"type\": \"number\",\r\n                \"description\": \"Accruing fine for an open loan, or stored fine after return. Payment does not erase this value.\"\r\n              }\r\n            }\r\n          }\r\n        ]\r\n      },\r\n      \"CreateLoan\": {\r\n        \"type\": \"object\",\r\n        \"required\": [\r\n          \"book_id\",\r\n          \"member_id\"\r\n        ],\r\n        \"properties\": {\r\n          \"book_id\": {\r\n            \"type\": \"integer\",\r\n            \"description\": \"ID of an available book.\"\r\n          },\r\n          \"member_id\": {\r\n            \"type\": \"integer\",\r\n            \"description\": \"ID of a member eligible to borrow.\"\r\n          },\r\n          \"due_date\": {\r\n            \"type\": \"string\",\r\n            \"format\": \"date\",\r\n            \"nullable\": true,\r\n            \"description\": \"Optional ISO date; defaults to 14 days from today when omitted, null, or empty. Past dates are accepted.\",\r\n            \"example\": \"2026-11-21\"\r\n          }\r\n        }\r\n      },\r\n      \"MemberLoan\": {\r\n        \"type\": \"object\",\r\n        \"required\": [\r\n          \"id\",\r\n          \"book_id\",\r\n          \"due_date\",\r\n          \"returned\",\r\n          \"fine\",\r\n          \"fine_paid\"\r\n        ],\r\n        \"properties\": {\r\n          \"id\": {\r\n            \"type\": \"integer\",\r\n            \"description\": \"Loan ID.\"\r\n          },\r\n          \"book_id\": {\r\n            \"type\": \"integer\",\r\n            \"description\": \"Book ID.\"\r\n          },\r\n          \"due_date\": {\r\n            \"type\": \"string\",\r\n            \"format\": \"date\"\r\n          },\r\n          \"returned\": {\r\n            \"type\": \"boolean\"\r\n          },\r\n          \"fine\": {\r\n            \"type\": \"number\",\r\n            \"description\": \"Stored fine.\"\r\n          },\r\n          \"fine_paid\": {\r\n            \"type\": \"boolean\"\r\n          }\r\n        }\r\n      },\r\n      \"MemberAccount\": {\r\n        \"type\": \"object\",\r\n        \"required\": [\r\n          \"loans\",\r\n          \"total_owed\",\r\n          \"loans_remaining\"\r\n        ],\r\n        \"properties\": {\r\n          \"loans\": {\r\n            \"type\": \"array\",\r\n            \"items\": {\r\n              \"$ref\": \"#/components/schemas/MemberLoan\"\r\n            }\r\n          },\r\n          \"total_owed\": {\r\n            \"type\": \"number\",\r\n            \"description\": \"Unpaid stored fines plus accruing fines on open loans.\"\r\n          },\r\n          \"loans_remaining\": {\r\n            \"type\": \"integer\",\r\n            \"description\": \"Member limit (3 for students, 5 for staff) minus open loans.\"\r\n          }\r\n        }\r\n      },\r\n      \"OverdueItem\": {\r\n        \"type\": \"object\",\r\n        \"required\": [\r\n          \"loan_id\",\r\n          \"title\",\r\n          \"member\",\r\n          \"days_late\",\r\n          \"fine\"\r\n        ],\r\n        \"properties\": {\r\n          \"loan_id\": {\r\n            \"type\": \"integer\",\r\n            \"description\": \"Loan ID.\"\r\n          },\r\n          \"title\": {\r\n            \"type\": \"string\",\r\n            \"description\": \"Book title.\"\r\n          },\r\n          \"member\": {\r\n            \"type\": \"string\",\r\n            \"description\": \"Member name.\"\r\n          },\r\n          \"days_late\": {\r\n            \"type\": \"integer\",\r\n            \"description\": \"Days past due.\"\r\n          },\r\n          \"fine\": {\r\n            \"type\": \"number\",\r\n            \"description\": \"Accruing fine at $0.50 per day.\"\r\n          }\r\n        }\r\n      },\r\n      \"OverdueReport\": {\r\n        \"type\": \"object\",\r\n        \"required\": [\r\n          \"items\",\r\n          \"total_fines\"\r\n        ],\r\n        \"properties\": {\r\n          \"items\": {\r\n            \"type\": \"array\",\r\n            \"items\": {\r\n              \"$ref\": \"#/components/schemas/OverdueItem\"\r\n            }\r\n          },\r\n          \"total_fines\": {\r\n            \"type\": \"number\",\r\n            \"description\": \"Sum of fines for open overdue loans.\"\r\n          }\r\n        }\r\n      },\r\n      \"SummaryReport\": {\r\n        \"type\": \"object\",\r\n        \"required\": [\r\n          \"total_books\",\r\n          \"on_loan\",\r\n          \"fines_outstanding\"\r\n        ],\r\n        \"properties\": {\r\n          \"total_books\": {\r\n            \"type\": \"integer\",\r\n            \"description\": \"Number of books.\"\r\n          },\r\n          \"on_loan\": {\r\n            \"type\": \"integer\",\r\n            \"description\": \"Number of open loans.\"\r\n          },\r\n          \"fines_outstanding\": {\r\n            \"type\": \"number\",\r\n            \"description\": \"Unpaid stored fines plus accruing fines on open loans.\"\r\n          }\r\n        }\r\n      }\r\n    }\r\n  }\r\n}\r\n"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
