@@ -218,3 +218,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Campus Library API runtime files (created when the app or tests run)
+library.db
+outbox.txt
