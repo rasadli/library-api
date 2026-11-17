@@ -59,18 +59,18 @@ Your instructor will give you a new requirement. Implement it in your refactored
 
 | Measure | Before | After |
 |---|---|---|
-| Tests passing | | |
-| Lines in the largest file | | |
-| Places where the fine rate appears | | |
-| Route handlers containing SQL | | |
-| Places edited for the change request | n/a | |
-| Can the fine rule be tested without HTTP or a database? | | |
+| Tests passing | 53 / 53 | 53 / 53 |
+| Lines in the largest file | 555 (`app.py`) | 115 (`loan_service.py`) |
+| Places where the fine rate appears | 7 | 1 (`fines.py`, `FINE_PER_DAY`) |
+| Route handlers containing SQL | 16 of 16 | 0 of 16 |
+| Places edited for the change request | n/a | _(fill in after the in-class change request)_ |
+| Can the fine rule be tested without HTTP or a database? | No | Yes: `fines.fine_for(due_date)` is plain Python (it still reads today's date) |
 
 ## Questions to answer
 
-1. Which module is the most cohesive? Describe its one job in a sentence.
-2. Which dependency did you remove, and what can now change independently because of that?
-3. What coupling remains, and why did you accept it?
+1. **Which module is the most cohesive?** `fines.py`. Its one job is to turn a due date into days late and a fine, using a single `FINE_PER_DAY` rate.
+2. **Which dependency did you remove, and what can now change independently?** The routes no longer depend on SQLite. Only the `*_repository.py` files run SQL, and only `db.py` opens a connection. So the database layer, the business rules in the services, and the HTTP layer can each change without editing the others. For example, the fine rate or the loan limits (`config.py`) can change without touching any route or query.
+3. **What coupling remains, and why did you accept it?** `member_service` and `report_service` still import `loan_service` to reuse `total_owed` and `count_open_loans`. `loan_repository.create_loan`/`mark_returned` also update the `books` table, so a checkout and its book update happen in one transaction. And services still talk to repositories as plain modules rather than through injected objects. I accepted this because it keeps the code simple and the behavior identical, and the 53 tests protect it. Splitting further would add indirection without changing anything the tests or users can see.
 
 ## API reference
 
